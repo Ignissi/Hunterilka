@@ -93,6 +93,8 @@ AP {number(structure.get('ap'))}, ROC AUC {number(structure.get('roc_auc'))}.
     policy = report.get("review_policy")
     if policy:
         selection = "первые структурные сигналы по необычности" if policy["structure_scope"] == "top_anomaly_signals" else "ранее сохранённые примеры структур; это не полный рейтинг всех структур"
+        if policy["structure_scope"] == "signals_and_form_examples":
+            selection = "сохранённые сигналы и отдельно обозначенные компактные примеры найденных форм test; это не полный рейтинг структур"
         text += f"\nСохранено {policy['operation_cases']} карточек операций и {policy['structure_cases']} карточек структур. Структурная выборка: {selection}.\n"
     else:
         text += "\nДля обновления сохранённых карточек после готового расчёта: `python -m scripts.refresh_review`.\n"

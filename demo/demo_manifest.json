@@ -77,12 +77,13 @@
     "events_sha256": "5d1fe76678917d2de62cca7233a9de61879e8528fba34a12ce8625fb93504134",
     "preparation_seconds": 42.633
   },
-  "cases": 530,
+  "cases": 550,
   "review_policy": {
     "version": "separate_v1",
     "operation_cases": 500,
-    "structure_cases": 30,
-    "structure_scope": "previous_sample"
+    "structure_cases": 50,
+    "structure_scope": "signals_and_form_examples"
   },
-  "license": "CDLA-Sharing-1.0"
+  "license": "CDLA-Sharing-1.0",
+  "workspace_version": "graph_workspace_v1"
 }

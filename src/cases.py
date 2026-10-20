@@ -14,7 +14,7 @@ def clean_vector(vector):
     return {name: None if pd.isna(value) else value for name, value in vector.items()}
 
 
-def build_case(candidate, scores, vectors, models, run_id, context=None, context_truncated=False, review_rank=None):
+def build_case(candidate, scores, vectors, models, run_id, context=None, context_truncated=False, review_rank=None, is_example=False):
     meta = models["meta"]
     identifiers = candidate["transaction_ids"]
     available = {identifier: float(scores[identifier]) for identifier in identifiers if identifier in scores}
@@ -25,7 +25,8 @@ def build_case(candidate, scores, vectors, models, run_id, context=None, context
     ranked_operation = candidate["family"] == "transaction" and review_rank is not None
     if ranked_operation and (review_rank < 1 or maximum is None):
         raise ValueError("Для места в очереди нужны положительный номер и оценка операции.")
-    if not operation_signal and not structure_signal and not ranked_operation:
+    structure_example = is_example and candidate["family"] != "transaction"
+    if not operation_signal and not structure_signal and not ranked_operation and not structure_example:
         return None
 
     priority = 1 if operation_signal and structure_signal else (2 if structure_signal else 3)
@@ -35,6 +36,7 @@ def build_case(candidate, scores, vectors, models, run_id, context=None, context
         "first_time": candidate["first_time"], "last_time": candidate["last_time"],
         "priority": priority, "operation_signal": bool(operation_signal),
         "review_rank": review_rank,
+        "is_example": bool(structure_example),
         "structure_signal": bool(structure_signal), "operation_score": maximum,
         "anomaly_score": anomaly, "operation_scores": available,
         "transaction_ids": identifiers, "events": candidate["events"],
@@ -68,7 +70,7 @@ class CaseService:
     def save(self, case):
         identifier = case["case_id"]
         signature = fingerprint([case["candidate_id"], case["operation_signal"], case["structure_signal"],
-                                 case["model_id"], case.get("review_rank")])
+                                 case["model_id"], case.get("review_rank"), case.get("context_version")])
         previous = self.index.get(identifier)
         if previous and previous["signature"] == signature:
             return
@@ -95,6 +97,10 @@ class CaseService:
         self.index[identifier]["signature"] = signature
         self.index[identifier]["review_rank"] = case.get("review_rank")
         self.index[identifier]["operations"] = len(case["transaction_ids"])
+        self.index[identifier]["accounts"] = len({e[side] for e in case["events"] for side in ["source_key", "target_key"]})
+        for key in ["is_example", "operation_signal", "structure_signal"]:
+            self.index[identifier][key] = bool(case.get(key, False))
+        self.index[identifier]["route"] = case["events"][0]["source_account"][-8:] + " → " + case["events"][-1]["target_account"][-8:]
 
     def flush(self):
         if self.index:

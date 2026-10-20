@@ -1,7 +1,6 @@
 """Рабочее место. Математика и изменение графа находятся в src."""
 
 import json
-import shutil
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -11,16 +10,17 @@ from src.explain import explain_transaction
 from src.models import load_models
 from src.patterns import FAMILY_NAMES
 from src.replay import open_replay
-from src.review_queue import ordered_cases
-from src.storage import ROOT, fingerprint, load_config, read_json
+from src.storage import ROOT, load_config, read_json
 from src.visualization import case_graph
+from src.workspace import SCHEME_TEXT, open_saved_cases, render_workspace
 
 
-st.set_page_config(page_title="Hunter | Графовый AML", page_icon="◈", layout="wide")
+st.set_page_config(page_title="Hunter | Графовый AML", page_icon="◈", layout="wide", initial_sidebar_state="collapsed")
 st.markdown("""
 <style>
-.block-container {padding-top:2rem; max-width:1500px;}
-h1 {font-size:2.35rem !important; letter-spacing:-.05em; font-weight:650 !important;}
+.block-container {padding-top:1.1rem; max-width:1600px;}
+[data-testid="stSidebar"] {min-width:250px;max-width:250px;}
+h1 {font-size:2rem !important; letter-spacing:-.05em; font-weight:650 !important;}
 h2 {font-size:1.3rem !important; letter-spacing:-.025em;}
 h3 {font-size:1.05rem !important;}
 div[data-testid="stMetric"] {border-top:1px solid #30415b; padding:14px 0 5px;}
@@ -32,8 +32,8 @@ div[data-testid="stDataFrame"] {border:1px solid #24334a; border-radius:8px;}
 </style>
 """, unsafe_allow_html=True)
 st.markdown('<div class="eyebrow">HUNTER / GRAPH INTELLIGENCE / V1.1</div>', unsafe_allow_html=True)
-st.title("Большая сеть. Объяснимый случай.")
-st.markdown('<div class="subline">Связанные переводы, два независимых сигнала и сохранённые основания рассмотрения.</div>', unsafe_allow_html=True)
+st.title("Hunterилка · граф финансовых операций")
+st.markdown('<div class="subline">История сети → связанные схемы → объяснимый случай → решение специалиста.</div>', unsafe_allow_html=True)
 
 config = load_config()
 if not (ROOT / "artifacts/model_meta.json").exists():
@@ -61,47 +61,61 @@ with st.sidebar:
     st.markdown("**Два уровня анализа**")
     st.caption("CatBoost оценивает новую операцию по прошлому контексту. Isolation Forest оценивает связанную структуру.")
     st.markdown("**Три обозначения**")
-    st.caption("Красный: операции сигнала. Янтарный: участники. Серый: дополнительный контекст. Подпись связи: число переводов.")
+    st.caption("Красный: связи выбранного случая. Серый: соседние переводы. Янтарный: выделенная операция. Нажмите ребро, чтобы увидеть участников, сумму и время.")
     st.divider()
     st.caption("Максимальная история: " + str(config["window_days"]) + " дней. Смена окна требует нового обучения.")
 
 
+@st.cache_data(show_spinner=False, max_entries=48)
+def render_case_graph(case, settings, expanded, context, individual, selected):
+    return case_graph(case, settings, expanded, context, individual, selected)
+
+
 def show_case(case):
     family = FAMILY_NAMES.get(case["family"], case["family"])
-    st.markdown("## " + family)
-    st.caption("Случай " + case["case_id"][:12] + " · версия " + str(case["version"]) + " · обнаружен " + case["detected_at"].replace("T", " "))
-    a, b, c = st.columns(3)
-    a.metric("Оценка операции", "н/д" if case["operation_score"] is None else f'{case["operation_score"]:.4f}')
-    b.metric("Необычность структуры", "н/д" if case["anomaly_score"] is None else f'{case["anomaly_score"]:.4f}')
-    c.metric("Операций в основании", str(len(case["events"])))
-
-    expanded = st.checkbox("Расширить граф до 100 счетов и 200 связей", key="expanded_" + case["case_id"])
-    rendered, counts = case_graph(case, config, expanded)
-    components.html(rendered, height=495, scrolling=False)
-    st.caption(f'Показано {counts["shown"]} из {counts["total"]} операций снимка · {counts["nodes"]} счетов · {counts["pairs"]} направленных связей')
+    participants = {e[side] for e in case["events"] for side in ["source_key", "target_key"]}
+    st.markdown("### " + family + " · " + str(len(participants)) + " счетов · " + str(len(case["events"])) + " переводов")
+    st.caption(SCHEME_TEXT.get(case["family"], "Связанный участок сети.") + " Обнаружено " + case["detected_at"].replace("T", " ") + " · случай " + case["case_id"][:12])
+    if case.get("is_example"):
+        st.info("Пример найденной формы из test. Он выбран для изучения механизма, без отбора по метке. Срабатывания моделей указаны отдельно.")
+    a, b, c = st.columns([2, 2, 3])
+    a.metric("CatBoost · максимальная оценка операции", "н/д" if case["operation_score"] is None else f'{case["operation_score"]:.4f}')
+    b.metric("Isolation Forest · необычность структуры", "н/д" if case["anomaly_score"] is None else f'{case["anomaly_score"]:.4f}')
     grounds = []
     if case["operation_signal"]:
-        grounds.append("оценка операции выше validation-порога")
+        grounds.append("сигнал CatBoost")
     if case["structure_signal"]:
-        grounds.append("необычность структуры выше validation-порога")
+        grounds.append("сигнал Isolation Forest")
+    c.markdown("**Основание:** " + (" + ".join(grounds) if grounds else "пороги моделей не пройдены"))
     if case.get("review_rank") is not None:
-        grounds.append("место " + str(case["review_rank"]) + " среди операций test по оценке CatBoost")
-    st.markdown("**Основания:** " + "; ".join(grounds) + ".")
-    if not case["operation_signal"] and not case["structure_signal"]:
-        st.caption("Операция выбрана по месту в очереди. Рабочий порог сигнала не пройден.")
-    st.caption("Интервал операций: " + case["first_time"].replace("T", " ") + " → " + case["last_time"].replace("T", " "))
-    if case["search_truncated"]:
-        st.warning("Поиск ограничен бюджетом. Этот случай не означает, что все структуры вокруг него просмотрены.")
+        c.caption("Место " + str(case["review_rank"]) + " в очереди операций test.")
+    c.caption("Статус: " + case["status"])
+    controls = st.columns([2, 2, 3, 5])
+    context = controls[0].toggle("Серое окружение", value=True, key="context_" + case["case_id"], disabled=not bool(case.get("context")))
+    available = case["events"] + case.get("context", [])
+    can_expand = len({e[side] for e in available for side in ["source_key", "target_key"]}) > config["display_nodes"] or len(available) > config["display_edges"]
+    expanded = controls[1].toggle("Расширенный срез", value=len(participants) > config["display_nodes"], key="expanded_" + case["case_id"], disabled=not can_expand)
+    edge_mode = controls[2].selectbox("Рёбра графа", ["Каждый перевод", "Объединить пары"], key="edges_" + case["case_id"])
+    event_labels = {e["transaction_id"]: e["source_account"][-6:] + " → " + e["target_account"][-6:] + " · " + e["amount_paid"] + " " + e["payment_currency"] + " · " + e["timestamp"][11:16] for e in case["events"]}
+    focus = controls[3].selectbox("Выделить перевод в схеме", ["all"] + list(event_labels), key="focus_" + case["case_id"], format_func=lambda value: "Вся схема" if value == "all" else event_labels[value])
+    rendered, counts = render_case_graph(case, config, expanded, context, edge_mode == "Каждый перевод", None if focus == "all" else focus)
+    components.html(rendered, height=585, scrolling=False)
+    st.caption(f'Красное: связи выбранного случая · серое: окружение · янтарное: выделенный перевод. Показано {counts["nodes"]} счетов, {counts["shown"]} из {counts["total"]} переводов; в основании {counts["evidence_shown"]} из {len(case["events"])}.')
+    if not case.get("context"):
+        st.caption("В этой карточке нет сохранённых соседних переводов. Расширение не создаёт новых связей.")
+    if counts["shown"] < counts["total"]:
+        st.caption("Часть связей скрыта лимитом экрана. Расширенный срез показывает до 100 счетов и 200 рёбер; полный список основания доступен ниже.")
+    if case.get("context_truncated") or case["search_truncated"]:
+        st.caption("Окружение или поиск ограничены бюджетом. Непоказанные связи не считаются отсутствующими.")
     if case["equal_timestamps"]:
-        st.info("Есть совпадающие временные метки. Порядок внутри одной минуты неизвестен; связи обозначены пунктиром.")
-    if case.get("context_truncated"):
-        st.caption("Дополнительный вычислительный контекст получен с ограничениями.")
+        st.caption("Пунктир: в основании есть переводы одной минуты; их внутренний порядок неизвестен.")
+    st.caption("Переводы основания: " + case["first_time"].replace("T", " ") + " → " + case["last_time"].replace("T", " "))
 
     operations, explanation, review = st.tabs(["Операции", "Объяснение", "Рассмотрение и экспорт"])
     with operations:
         frame = pd.DataFrame(case["events"])
         columns = ["transaction_id", "timestamp", "source_bank", "source_account", "target_bank", "target_account", "amount_paid", "payment_currency", "amount_received", "receiving_currency", "payment_format"]
-        st.dataframe(frame[columns], hide_index=True, use_container_width=True)
+        st.dataframe(frame[columns].rename(columns={"transaction_id": "ID", "timestamp": "Время", "source_bank": "Банк отправителя", "source_account": "Отправитель", "target_bank": "Банк получателя", "target_account": "Получатель", "amount_paid": "Отправлено", "payment_currency": "Валюта отправления", "amount_received": "Получено", "receiving_currency": "Валюта получения", "payment_format": "Формат"}), hide_index=True, use_container_width=True)
         st.caption("Суммы сохранены как в источнике. Валюты не складываются. Красный цвет означает основание просмотра, а не подтверждённое отмывание.")
 
     with explanation:
@@ -137,7 +151,7 @@ def show_case(case):
             comment = st.text_area("Комментарий", value=case["comment"])
             if st.form_submit_button("Сохранить решение"):
                 st.session_state.service.review(case["case_id"], status, comment)
-                st.success("Решение сохранено.")
+                st.rerun()
         current = st.session_state.service.get(case["case_id"])
         st.download_button("Скачать случай JSON", json.dumps(current, ensure_ascii=False, indent=2), file_name="case_" + case["case_id"][:12] + ".json", mime="application/json")
         st.download_button("Скачать операции CSV", pd.DataFrame(case["events"]).to_csv(index=False).encode("utf-8-sig"), file_name="operations.csv", mime="text/csv")
@@ -145,57 +159,7 @@ def show_case(case):
 
 
 def show_queue(service):
-    st.session_state.service = service
-    if not service.index:
-        st.info("Очередь пока пуста. История накапливается; отсутствие случая не является ошибкой.")
-        return
-    left, right = st.columns([1, 2.8], gap="large")
-    with left:
-        st.markdown("## Очереди рассмотрения")
-        channel = st.radio("Что рассматриваем", ["Операции", "Структуры"], horizontal=True)
-        queue = "operations" if channel == "Операции" else "structures"
-        table = ordered_cases(list(service.index.values()), queue)
-        st.caption("Операции идут по оценке CatBoost. Структуры имеют отдельную очередь по необычности.")
-        if table.empty:
-            st.info("В этой очереди пока нет карточек. Можно выбрать другую.")
-            return
-        family = st.selectbox("Структура", ["Все"] + sorted(table.family.unique()), format_func=lambda value: FAMILY_NAMES.get(value, value))
-        status = st.selectbox("Рассмотрение", ["Все", "Новый", "Требует проверки", "Рассмотрен"])
-        dates = sorted({value[:10] for value in table.detected_at})
-        day = st.selectbox("Дата обнаружения", ["Все"] + dates)
-        if family != "Все":
-            table = table.loc[table.family == family]
-        if status != "Все":
-            table = table.loc[table.status == status]
-        if day != "Все":
-            table = table.loc[table.detected_at.str.startswith(day)]
-        if table.empty:
-            st.info("Случаев по фильтрам нет.")
-            return
-        if len(table) > 5000:
-            st.warning("Найдено " + str(len(table)) + " случаев. Сузьте дату, тип или статус.")
-            return
-        pages = max(1, (len(table) + 49) // 50)
-        page = st.selectbox("Страница", range(1, pages + 1))
-        visible = table.iloc[(page - 1) * 50:page * 50]
-        st.caption(str(len(table)) + " случаев · на странице " + str(len(visible)))
-        identifiers = visible.case_id.tolist()
-
-        def label(identifier):
-            row = service.index[identifier]
-            return FAMILY_NAMES.get(row["family"], row["family"]) + " · " + str(row["operations"]) + " оп. · " + identifier[:6]
-
-        previous_id = st.session_state.get("selected_case_id")
-        initial = identifiers.index(previous_id) if previous_id in identifiers else 0
-        identifier = st.selectbox("Открыть случай", identifiers, index=initial, format_func=label)
-        st.session_state.selected_case_id = identifier
-        score = "operation_score" if queue == "operations" else "anomaly_score"
-        overview = visible[["family", "operations", score]].copy()
-        overview.family = overview.family.map(FAMILY_NAMES)
-        overview.columns = ["Тип", "Операций", "Оценка CatBoost" if queue == "operations" else "Необычность"]
-        st.dataframe(overview, hide_index=True, use_container_width=True)
-    with right:
-        show_case(service.get(identifier))
+    render_workspace(service, config, show_case)
 
 
 workspace, research, help_tab = st.tabs(["Рабочее место", "Проверка моделей", "Справка"])
@@ -208,23 +172,11 @@ with workspace:
             if demo["model_id"] != models["meta"]["model_id"]:
                 st.error("Карточки относятся к другой модели. Выполните scripts.evaluate после обучения.")
                 st.stop()
-            # Решения демонстратора хранятся отдельно от поставленных исходных карточек.
-            destination = ROOT / "runs/demo_review" / demo["model_id"] / fingerprint(demo)[:12] / "cases"
-            if not destination.exists():
-                shutil.copytree(ROOT / "demo/cases", destination)
-            service = CaseService(destination)
-            st.caption("СОХРАНЁННЫЙ TEST · выборка карточек; поток сейчас не воспроизводится")
-            if demo.get("review_policy"):
-                st.caption("Операции: первые 500 по оценке модели, включая оценки ниже рабочего порога. Структуры: отдельная выборка примеров. Отбор без меток.")
+            service = open_saved_cases(demo)
             if demo["data"].get("scope") != "full_source":
                 st.warning("Техническая проверка на укороченном профиле. Полный эксперимент ещё не рассчитан.")
-            a, b, c, d = st.columns(4)
-            a.metric("Обработано операций", f'{demo["data"]["rows"]:,}'.replace(",", " "))
-            b.metric("Счетов профиля", f'{demo["data"]["accounts"]:,}'.replace(",", " "))
-            c.metric("Карточек в демонстрации", str(demo["cases"]))
-            d.metric("Окно истории", str(config["window_days"]) + " дней")
-            st.caption("Доступная история: " + demo["data"]["first_time"] + " → " + demo["data"]["last_time"])
-            show_queue(service)
+            render_workspace(service, config, show_case, demo)
+
     else:
         if not (ROOT / "data/processed/events.parquet").exists():
             st.info("Для воспроизведения подготовьте IBM CSV по RUN_GUIDE.md. Сохранённые случаи доступны сразу.")
@@ -242,7 +194,7 @@ with workspace:
                     st.session_state.controller = controller
                     st.session_state.playing = False
 
-            @st.fragment(run_every=1.0)
+            @st.fragment(run_every=1.0 if st.session_state.get("playing", False) else None)
             def live_workspace():
                 controller = st.session_state.get("controller")
                 if controller is None:
@@ -252,8 +204,10 @@ with workspace:
                 disabled = controller.status in ["Ошибка", "Завершён"]
                 if a.button("Запуск", disabled=disabled):
                     st.session_state.playing = True
+                    st.rerun()
                 if b.button("Пауза"):
                     st.session_state.playing = False
+                    st.rerun()
                 single = c.button("Одна группа", disabled=disabled)
                 packet = d.button("Пакет", disabled=disabled)
                 try:

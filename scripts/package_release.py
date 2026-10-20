@@ -9,6 +9,8 @@ import pandas as pd
 from src.models import load_models
 from src.data import validate_split
 from src.review_queue import REVIEW_POLICY
+from src.snapshot import WORKSPACE_FILES, WORKSPACE_VERSION
+from src.storage import file_hash
 from src.storage import ROOT, load_config, read_json
 
 
@@ -30,6 +32,17 @@ def main():
         raise ValueError("Отчёт относится к другому набору данных.")
     if report.get("review_policy", {}).get("version") != REVIEW_POLICY or demo.get("review_policy") != report["review_policy"]:
         raise ValueError("Обновите очереди и отчёт: python -m scripts.refresh_review.")
+    workspace_path = ROOT / "demo/workspace_manifest.json"
+    if demo.get("workspace_version") != WORKSPACE_VERSION or not workspace_path.exists():
+        raise ValueError("Подготовьте окружение и обзор сети: python -m scripts.build_workspace.")
+    workspace = read_json(workspace_path)
+    if set(workspace["files"]) != set(WORKSPACE_FILES):
+        raise ValueError("Состав файлов обзора отличается от разрешённого списка.")
+    if workspace["model_id"] != demo["model_id"] or workspace["data_hash"] != models["meta"]["data_hash"]:
+        raise ValueError("Обзор сети относится к другому запуску.")
+    for name, checksum in workspace["files"].items():
+        if file_hash(ROOT / "demo" / name) != checksum:
+            raise ValueError("Файл обзора изменён: " + name)
 
     names = list(ROOT_FILES)
     names += ["docs/" + name for name in DOCS]
@@ -40,6 +53,7 @@ def main():
     names += ["artifacts/model_meta.json", "artifacts/feature_manifest.json"]
     names += ["reports/" + name for name in REPORTS]
     names += ["demo/demo_manifest.json", "demo/DATA_NOTICE.md"]
+    names += ["demo/workspace_manifest.json"] + ["demo/" + name for name in workspace["files"]]
     index_path = ROOT / "demo/cases/index.parquet"
     if demo["cases"]:
         index = pd.read_parquet(index_path)

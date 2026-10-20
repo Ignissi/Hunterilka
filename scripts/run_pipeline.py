@@ -13,7 +13,7 @@ def main():
     parser.add_argument("--input", default="data/raw/HI-Small_Trans.csv")
     parser.add_argument("--device", choices=["CPU", "GPU"], default="GPU")
     parser.add_argument("--limit", type=int, default=0, help="0: весь файл; положительное число: только техническая проверка")
-    parser.add_argument("--from-stage", choices=["prepare", "features", "train", "evaluate"], default="prepare")
+    parser.add_argument("--from-stage", choices=["prepare", "features", "train", "evaluate", "workspace"], default="prepare")
     args = parser.parse_args()
     source = Path(args.input).expanduser().resolve()
     if not source.is_file():
@@ -25,6 +25,7 @@ def main():
         ("features", ["scripts.build_features"]),
         ("train", ["scripts.train", "--device", args.device]),
         ("evaluate", ["scripts.evaluate"]),
+        ("workspace", ["scripts.build_workspace"]),
     ]
     start = [name for name, _ in stages].index(args.from_stage)
     for index, (name, arguments) in enumerate(stages):

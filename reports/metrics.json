@@ -327,8 +327,8 @@
   "review_policy": {
     "version": "separate_v1",
     "operation_cases": 500,
-    "structure_cases": 30,
-    "structure_scope": "previous_sample"
+    "structure_cases": 50,
+    "structure_scope": "signals_and_form_examples"
   },
   "review_budgets_policy": "legacy_mixed"
 }
