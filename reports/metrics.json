@@ -1,0 +1,334 @@
+{
+  "selected": "B_plain",
+  "selection_rule": "validation: found@100, затем AP",
+  "transaction_models": {
+    "A_plain": {
+      "rows": 986286,
+      "positive": 1784,
+      "prevalence": 0.0018088059650040657,
+      "ap": 0.43354951675226977,
+      "roc_auc": 0.9835215189673233,
+      "undefined_reason": null,
+      "precision": 0.9285714285714286,
+      "recall": 0.10201793721973094,
+      "f1": 0.18383838383838383,
+      "precision_at_k": 0.97,
+      "k": 100,
+      "threshold": 0.8339629149567692,
+      "alerts": 196,
+      "false_alerts_per_1000": 0.01419466564465074,
+      "confusion_matrix": [
+        [
+          984488,
+          14
+        ],
+        [
+          1602,
+          182
+        ]
+      ],
+      "top_k": {
+        "100": {
+          "reviewed": 100,
+          "found": 97,
+          "precision": 0.97,
+          "recall": 0.05437219730941704
+        },
+        "500": {
+          "reviewed": 500,
+          "found": 404,
+          "precision": 0.808,
+          "recall": 0.226457399103139
+        }
+      }
+    },
+    "A_balanced": {
+      "rows": 986286,
+      "positive": 1784,
+      "prevalence": 0.0018088059650040657,
+      "ap": 0.19928811852833977,
+      "roc_auc": 0.9783546590599224,
+      "undefined_reason": null,
+      "precision": 0.34006054490413723,
+      "recall": 0.1889013452914798,
+      "f1": 0.24288288288288287,
+      "precision_at_k": 0.82,
+      "k": 100,
+      "threshold": 0.9754782162017503,
+      "alerts": 991,
+      "false_alerts_per_1000": 0.6630936665429703,
+      "confusion_matrix": [
+        [
+          983848,
+          654
+        ],
+        [
+          1447,
+          337
+        ]
+      ],
+      "top_k": {
+        "100": {
+          "reviewed": 100,
+          "found": 82,
+          "precision": 0.82,
+          "recall": 0.04596412556053812
+        },
+        "500": {
+          "reviewed": 500,
+          "found": 244,
+          "precision": 0.488,
+          "recall": 0.1367713004484305
+        }
+      }
+    },
+    "B_plain": {
+      "rows": 986286,
+      "positive": 1784,
+      "prevalence": 0.0018088059650040657,
+      "ap": 0.7208689660824941,
+      "roc_auc": 0.9905982416613757,
+      "undefined_reason": null,
+      "precision": 0.9854014598540146,
+      "recall": 0.15134529147982062,
+      "f1": 0.26239067055393583,
+      "precision_at_k": 1.0,
+      "k": 100,
+      "threshold": 0.9716885546935332,
+      "alerts": 274,
+      "false_alerts_per_1000": 0.004055618755614498,
+      "confusion_matrix": [
+        [
+          984498,
+          4
+        ],
+        [
+          1514,
+          270
+        ]
+      ],
+      "top_k": {
+        "100": {
+          "reviewed": 100,
+          "found": 100,
+          "precision": 1.0,
+          "recall": 0.05605381165919283
+        },
+        "500": {
+          "reviewed": 500,
+          "found": 492,
+          "precision": 0.984,
+          "recall": 0.2757847533632287
+        }
+      }
+    },
+    "B_balanced": {
+      "rows": 986286,
+      "positive": 1784,
+      "prevalence": 0.0018088059650040657,
+      "ap": 0.24425385125000787,
+      "roc_auc": 0.9890551829996714,
+      "undefined_reason": null,
+      "precision": 0.3855855855855856,
+      "recall": 0.11995515695067265,
+      "f1": 0.18298418127404875,
+      "precision_at_k": 0.27,
+      "k": 100,
+      "threshold": 0.9840745247255941,
+      "alerts": 555,
+      "false_alerts_per_1000": 0.34574149891613587,
+      "confusion_matrix": [
+        [
+          984161,
+          341
+        ],
+        [
+          1570,
+          214
+        ]
+      ],
+      "top_k": {
+        "100": {
+          "reviewed": 100,
+          "found": 27,
+          "precision": 0.27,
+          "recall": 0.015134529147982063
+        },
+        "500": {
+          "reviewed": 500,
+          "found": 192,
+          "precision": 0.384,
+          "recall": 0.10762331838565023
+        }
+      }
+    }
+  },
+  "structure": {
+    "rows": 409765,
+    "positive": 3178,
+    "prevalence": 0.007755664832281918,
+    "ap": 0.02048430654738377,
+    "roc_auc": 0.6354889838370771,
+    "undefined_reason": null,
+    "precision": 0.07627118644067797,
+    "recall": 0.005663939584644431,
+    "f1": 0.01054481546572935,
+    "precision_at_k": 0.09,
+    "k": 100,
+    "threshold": 0.7667763362614806,
+    "alerts": 236,
+    "false_alerts_per_1000": 0.5320122509243103,
+    "confusion_matrix": [
+      [
+        406369,
+        218
+      ],
+      [
+        3160,
+        18
+      ]
+    ],
+    "raw_candidates": 2103807,
+    "deduplicated_episodes": 409765,
+    "by_family": {
+      "chain": 1686006,
+      "fan_out": 326480,
+      "fan_in": 68623,
+      "reciprocal": 253,
+      "gather_scatter": 22403,
+      "scatter_gather": 38,
+      "cycle": 4
+    },
+    "proxy": "Есть положительная операция текущего test; это не метка всей схемы"
+  },
+  "search_coverage": {
+    "test_positive_operations": 1784,
+    "in_any_candidate": 1467,
+    "in_latest_episodes": 1394,
+    "in_structure_alerts": 28,
+    "in_saved_cases": 627,
+    "in_operation_alerts": 270,
+    "additional_from_structures": 28,
+    "candidate_recall": 0.8223094170403588
+  },
+  "equal_budget": {
+    "k": 100,
+    "operation_positive_operations": 100,
+    "combined_positive_operations": 9,
+    "additional_positive_operations": 9,
+    "lost_positive_operations": 100,
+    "operation_false_cases": 0,
+    "combined_false_cases": 91,
+    "combined_operations_to_read": 6959,
+    "scope": "Последние сохранённые сигналы к концу test; одинаковое число карточек, их размеры различаются"
+  },
+  "review_budgets": {
+    "100": {
+      "k": 100,
+      "operation_positive_operations": 100,
+      "combined_positive_operations": 9,
+      "additional_positive_operations": 9,
+      "lost_positive_operations": 100,
+      "operation_false_cases": 0,
+      "combined_false_cases": 91,
+      "combined_operations_to_read": 6959,
+      "scope": "Последние сохранённые сигналы к концу test; одинаковое число карточек, их размеры различаются"
+    },
+    "500": {
+      "k": 500,
+      "operation_positive_operations": 492,
+      "combined_positive_operations": 209,
+      "additional_positive_operations": 101,
+      "lost_positive_operations": 384,
+      "operation_false_cases": 8,
+      "combined_false_cases": 319,
+      "combined_operations_to_read": 27986,
+      "scope": "Последние сохранённые сигналы к концу test; одинаковое число карточек, их размеры различаются"
+    }
+  },
+  "data": {
+    "source": "IBM AML / HI-Small / Kaggle ealtman2019",
+    "source_url": "https://www.kaggle.com/datasets/ealtman2019/ibm-transactions-for-anti-money-laundering-aml",
+    "license": "CDLA-Sharing-1.0",
+    "synthetic_source": true,
+    "source_file": "HI-Small_Trans.csv",
+    "sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040",
+    "source_rows": 5078345,
+    "source_positive": 5177,
+    "excluded_crypto": 148282,
+    "excluded_crypto_positive": 56,
+    "invalid_rows": 0,
+    "profile_limit": 0,
+    "rows": 4930063,
+    "positive": 5121,
+    "first_time": "2022-09-01T00:00:00",
+    "last_time": "2022-09-18T16:18:00",
+    "history_days": 17.679166666666667,
+    "scope": "full_source",
+    "split_method": "chronological_rows_60_20_20",
+    "train_end": "2022-09-06T13:34:00",
+    "validation_end": "2022-09-08T16:13:00",
+    "parts": {
+      "train": {
+        "rows": 2957790,
+        "positive": 2268
+      },
+      "validation": {
+        "rows": 985987,
+        "positive": 1069
+      },
+      "test": {
+        "rows": 986286,
+        "positive": 1784
+      }
+    },
+    "source_currencies": [
+      "Australian Dollar",
+      "Bitcoin",
+      "Brazil Real",
+      "Canadian Dollar",
+      "Euro",
+      "Mexican Peso",
+      "Ruble",
+      "Rupee",
+      "Saudi Riyal",
+      "Shekel",
+      "Swiss Franc",
+      "UK Pound",
+      "US Dollar",
+      "Yen",
+      "Yuan"
+    ],
+    "source_formats": [
+      "ACH",
+      "Bitcoin",
+      "Cash",
+      "Cheque",
+      "Credit Card",
+      "Reinvestment",
+      "Wire"
+    ],
+    "excluded_values": [
+      "bitcoin",
+      "btc",
+      "crypto",
+      "cryptocurrency",
+      "eth",
+      "ethereum"
+    ],
+    "timezone": "Не задан источником",
+    "accounts": 500632,
+    "pairs": 988659,
+    "events_sha256": "5d1fe76678917d2de62cca7233a9de61879e8528fba34a12ce8625fb93504134",
+    "preparation_seconds": 42.633
+  },
+  "model_id": "400b0ff63fc7094db5b66d39",
+  "training_device": "GPU",
+  "review_policy": {
+    "version": "separate_v1",
+    "operation_cases": 500,
+    "structure_cases": 30,
+    "structure_scope": "previous_sample"
+  },
+  "review_budgets_policy": "legacy_mixed"
+}

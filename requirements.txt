@@ -1,0 +1,9 @@
+numpy==1.26.4
+pandas==2.2.3
+pyarrow==19.0.1
+networkx==3.6.1
+catboost==1.2.10
+scikit-learn==1.6.1
+streamlit==1.45.1
+pyvis==0.3.2
+joblib==1.5.3

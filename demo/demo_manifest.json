@@ -1,0 +1,88 @@
+{
+  "mode": "Сохранённый test: первые 500 операций по оценке и отдельная выборка структур",
+  "model_id": "400b0ff63fc7094db5b66d39",
+  "data": {
+    "source": "IBM AML / HI-Small / Kaggle ealtman2019",
+    "source_url": "https://www.kaggle.com/datasets/ealtman2019/ibm-transactions-for-anti-money-laundering-aml",
+    "license": "CDLA-Sharing-1.0",
+    "synthetic_source": true,
+    "source_file": "HI-Small_Trans.csv",
+    "sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040",
+    "source_rows": 5078345,
+    "source_positive": 5177,
+    "excluded_crypto": 148282,
+    "excluded_crypto_positive": 56,
+    "invalid_rows": 0,
+    "profile_limit": 0,
+    "rows": 4930063,
+    "positive": 5121,
+    "first_time": "2022-09-01T00:00:00",
+    "last_time": "2022-09-18T16:18:00",
+    "history_days": 17.679166666666667,
+    "scope": "full_source",
+    "split_method": "chronological_rows_60_20_20",
+    "train_end": "2022-09-06T13:34:00",
+    "validation_end": "2022-09-08T16:13:00",
+    "parts": {
+      "train": {
+        "rows": 2957790,
+        "positive": 2268
+      },
+      "validation": {
+        "rows": 985987,
+        "positive": 1069
+      },
+      "test": {
+        "rows": 986286,
+        "positive": 1784
+      }
+    },
+    "source_currencies": [
+      "Australian Dollar",
+      "Bitcoin",
+      "Brazil Real",
+      "Canadian Dollar",
+      "Euro",
+      "Mexican Peso",
+      "Ruble",
+      "Rupee",
+      "Saudi Riyal",
+      "Shekel",
+      "Swiss Franc",
+      "UK Pound",
+      "US Dollar",
+      "Yen",
+      "Yuan"
+    ],
+    "source_formats": [
+      "ACH",
+      "Bitcoin",
+      "Cash",
+      "Cheque",
+      "Credit Card",
+      "Reinvestment",
+      "Wire"
+    ],
+    "excluded_values": [
+      "bitcoin",
+      "btc",
+      "crypto",
+      "cryptocurrency",
+      "eth",
+      "ethereum"
+    ],
+    "timezone": "Не задан источником",
+    "accounts": 500632,
+    "pairs": 988659,
+    "events_sha256": "5d1fe76678917d2de62cca7233a9de61879e8528fba34a12ce8625fb93504134",
+    "preparation_seconds": 42.633
+  },
+  "cases": 530,
+  "review_policy": {
+    "version": "separate_v1",
+    "operation_cases": 500,
+    "structure_cases": 30,
+    "structure_scope": "previous_sample"
+  },
+  "license": "CDLA-Sharing-1.0"
+}
