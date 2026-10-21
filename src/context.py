@@ -1,10 +1,15 @@
-"""Ограниченные обращения к большому графу."""
+"""Ограниченные обходы большого графа: короткий обратный путь и окружение случая."""
 
 from collections import deque
 from itertools import islice
 
 
 def short_return_path(graph, source, target, budget):
+    """Есть ли путь target -> ... -> source длиной до двух рёбер.
+
+    Возвращает (найден, обход завершён). Если бюджет просмотра исчерпан,
+    ответ «не найден» не является доказательством отсутствия пути.
+    """
     if source == target:
         return False, True
 
@@ -29,6 +34,11 @@ def short_return_path(graph, source, target, budget):
 
 
 def snapshot_context(state, evidence, config):
+    """Соседние переводы вокруг основания случая: два шага по графу, с лимитами.
+
+    Берутся только события, которые уже есть в графе, то есть прошлое на момент
+    обнаружения. Будущих переводов в окружении быть не может.
+    """
     selected = {event["transaction_id"]: event.copy() for event in evidence}
     nodes = {e[side] for e in evidence for side in ["source_key", "target_key"]}
     scanned = 0
@@ -38,7 +48,6 @@ def snapshot_context(state, evidence, config):
     for _ in range(2):
         next_frontier = []
         for node in frontier:
-            # Входящее и исходящее направления получают одинаковый предел просмотра.
             for index in [state.incoming, state.outgoing]:
                 identifiers = index.get(node, {})
                 allowance = min(32, max(0, config["context_scan_limit"] - scanned))

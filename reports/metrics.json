@@ -1,271 +1,20 @@
 {
   "selected": "B_plain",
   "selection_rule": "validation: found@100, затем AP",
-  "transaction_models": {
-    "A_plain": {
-      "rows": 986286,
-      "positive": 1784,
-      "prevalence": 0.0018088059650040657,
-      "ap": 0.43354951675226977,
-      "roc_auc": 0.9835215189673233,
-      "undefined_reason": null,
-      "precision": 0.9285714285714286,
-      "recall": 0.10201793721973094,
-      "f1": 0.18383838383838383,
-      "precision_at_k": 0.97,
-      "k": 100,
-      "threshold": 0.8339629149567692,
-      "alerts": 196,
-      "false_alerts_per_1000": 0.01419466564465074,
-      "confusion_matrix": [
-        [
-          984488,
-          14
-        ],
-        [
-          1602,
-          182
-        ]
-      ],
-      "top_k": {
-        "100": {
-          "reviewed": 100,
-          "found": 97,
-          "precision": 0.97,
-          "recall": 0.05437219730941704
-        },
-        "500": {
-          "reviewed": 500,
-          "found": 404,
-          "precision": 0.808,
-          "recall": 0.226457399103139
-        }
-      }
-    },
-    "A_balanced": {
-      "rows": 986286,
-      "positive": 1784,
-      "prevalence": 0.0018088059650040657,
-      "ap": 0.19928811852833977,
-      "roc_auc": 0.9783546590599224,
-      "undefined_reason": null,
-      "precision": 0.34006054490413723,
-      "recall": 0.1889013452914798,
-      "f1": 0.24288288288288287,
-      "precision_at_k": 0.82,
-      "k": 100,
-      "threshold": 0.9754782162017503,
-      "alerts": 991,
-      "false_alerts_per_1000": 0.6630936665429703,
-      "confusion_matrix": [
-        [
-          983848,
-          654
-        ],
-        [
-          1447,
-          337
-        ]
-      ],
-      "top_k": {
-        "100": {
-          "reviewed": 100,
-          "found": 82,
-          "precision": 0.82,
-          "recall": 0.04596412556053812
-        },
-        "500": {
-          "reviewed": 500,
-          "found": 244,
-          "precision": 0.488,
-          "recall": 0.1367713004484305
-        }
-      }
-    },
-    "B_plain": {
-      "rows": 986286,
-      "positive": 1784,
-      "prevalence": 0.0018088059650040657,
-      "ap": 0.7208689660824941,
-      "roc_auc": 0.9905982416613757,
-      "undefined_reason": null,
-      "precision": 0.9854014598540146,
-      "recall": 0.15134529147982062,
-      "f1": 0.26239067055393583,
-      "precision_at_k": 1.0,
-      "k": 100,
-      "threshold": 0.9716885546935332,
-      "alerts": 274,
-      "false_alerts_per_1000": 0.004055618755614498,
-      "confusion_matrix": [
-        [
-          984498,
-          4
-        ],
-        [
-          1514,
-          270
-        ]
-      ],
-      "top_k": {
-        "100": {
-          "reviewed": 100,
-          "found": 100,
-          "precision": 1.0,
-          "recall": 0.05605381165919283
-        },
-        "500": {
-          "reviewed": 500,
-          "found": 492,
-          "precision": 0.984,
-          "recall": 0.2757847533632287
-        }
-      }
-    },
-    "B_balanced": {
-      "rows": 986286,
-      "positive": 1784,
-      "prevalence": 0.0018088059650040657,
-      "ap": 0.24425385125000787,
-      "roc_auc": 0.9890551829996714,
-      "undefined_reason": null,
-      "precision": 0.3855855855855856,
-      "recall": 0.11995515695067265,
-      "f1": 0.18298418127404875,
-      "precision_at_k": 0.27,
-      "k": 100,
-      "threshold": 0.9840745247255941,
-      "alerts": 555,
-      "false_alerts_per_1000": 0.34574149891613587,
-      "confusion_matrix": [
-        [
-          984161,
-          341
-        ],
-        [
-          1570,
-          214
-        ]
-      ],
-      "top_k": {
-        "100": {
-          "reviewed": 100,
-          "found": 27,
-          "precision": 0.27,
-          "recall": 0.015134529147982063
-        },
-        "500": {
-          "reviewed": 500,
-          "found": 192,
-          "precision": 0.384,
-          "recall": 0.10762331838565023
-        }
-      }
-    }
-  },
-  "structure": {
-    "rows": 409765,
-    "positive": 3178,
-    "prevalence": 0.007755664832281918,
-    "ap": 0.02048430654738377,
-    "roc_auc": 0.6354889838370771,
-    "undefined_reason": null,
-    "precision": 0.07627118644067797,
-    "recall": 0.005663939584644431,
-    "f1": 0.01054481546572935,
-    "precision_at_k": 0.09,
-    "k": 100,
-    "threshold": 0.7667763362614806,
-    "alerts": 236,
-    "false_alerts_per_1000": 0.5320122509243103,
-    "confusion_matrix": [
-      [
-        406369,
-        218
-      ],
-      [
-        3160,
-        18
-      ]
-    ],
-    "raw_candidates": 2103807,
-    "deduplicated_episodes": 409765,
-    "by_family": {
-      "chain": 1686006,
-      "fan_out": 326480,
-      "fan_in": 68623,
-      "reciprocal": 253,
-      "gather_scatter": 22403,
-      "scatter_gather": 38,
-      "cycle": 4
-    },
-    "proxy": "Есть положительная операция текущего test; это не метка всей схемы"
-  },
-  "search_coverage": {
-    "test_positive_operations": 1784,
-    "in_any_candidate": 1467,
-    "in_latest_episodes": 1394,
-    "in_structure_alerts": 28,
-    "in_saved_cases": 627,
-    "in_operation_alerts": 270,
-    "additional_from_structures": 28,
-    "candidate_recall": 0.8223094170403588
-  },
-  "equal_budget": {
-    "k": 100,
-    "operation_positive_operations": 100,
-    "combined_positive_operations": 9,
-    "additional_positive_operations": 9,
-    "lost_positive_operations": 100,
-    "operation_false_cases": 0,
-    "combined_false_cases": 91,
-    "combined_operations_to_read": 6959,
-    "scope": "Последние сохранённые сигналы к концу test; одинаковое число карточек, их размеры различаются"
-  },
-  "review_budgets": {
-    "100": {
-      "k": 100,
-      "operation_positive_operations": 100,
-      "combined_positive_operations": 9,
-      "additional_positive_operations": 9,
-      "lost_positive_operations": 100,
-      "operation_false_cases": 0,
-      "combined_false_cases": 91,
-      "combined_operations_to_read": 6959,
-      "scope": "Последние сохранённые сигналы к концу test; одинаковое число карточек, их размеры различаются"
-    },
-    "500": {
-      "k": 500,
-      "operation_positive_operations": 492,
-      "combined_positive_operations": 209,
-      "additional_positive_operations": 101,
-      "lost_positive_operations": 384,
-      "operation_false_cases": 8,
-      "combined_false_cases": 319,
-      "combined_operations_to_read": 27986,
-      "scope": "Последние сохранённые сигналы к концу test; одинаковое число карточек, их размеры различаются"
-    }
-  },
+  "model_id": "89040564cfef818464b6cdd4",
+  "training_device": "GPU",
   "data": {
     "source": "IBM AML / HI-Small / Kaggle ealtman2019",
     "source_url": "https://www.kaggle.com/datasets/ealtman2019/ibm-transactions-for-anti-money-laundering-aml",
     "license": "CDLA-Sharing-1.0",
-    "synthetic_source": true,
-    "source_file": "HI-Small_Trans.csv",
-    "sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040",
-    "source_rows": 5078345,
-    "source_positive": 5177,
-    "excluded_crypto": 148282,
-    "excluded_crypto_positive": 56,
-    "invalid_rows": 0,
-    "profile_limit": 0,
     "rows": 4930063,
     "positive": 5121,
+    "excluded_crypto": 148282,
+    "invalid_rows": 0,
     "first_time": "2022-09-01T00:00:00",
     "last_time": "2022-09-18T16:18:00",
     "history_days": 17.679166666666667,
     "scope": "full_source",
-    "split_method": "chronological_rows_60_20_20",
     "train_end": "2022-09-06T13:34:00",
     "validation_end": "2022-09-08T16:13:00",
     "parts": {
@@ -282,53 +31,526 @@
         "positive": 1784
       }
     },
-    "source_currencies": [
-      "Australian Dollar",
-      "Bitcoin",
-      "Brazil Real",
-      "Canadian Dollar",
-      "Euro",
-      "Mexican Peso",
-      "Ruble",
-      "Rupee",
-      "Saudi Riyal",
-      "Shekel",
-      "Swiss Franc",
-      "UK Pound",
-      "US Dollar",
-      "Yen",
-      "Yuan"
-    ],
-    "source_formats": [
-      "ACH",
-      "Bitcoin",
-      "Cash",
-      "Cheque",
-      "Credit Card",
-      "Reinvestment",
-      "Wire"
-    ],
-    "excluded_values": [
-      "bitcoin",
-      "btc",
-      "crypto",
-      "cryptocurrency",
-      "eth",
-      "ethereum"
-    ],
-    "timezone": "Не задан источником",
     "accounts": 500632,
-    "pairs": 988659,
-    "events_sha256": "5d1fe76678917d2de62cca7233a9de61879e8528fba34a12ce8625fb93504134",
-    "preparation_seconds": 42.633
+    "source_sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040",
+    "events_sha256": "84da614dffa8fc3ad0fd3c12f13ca12b14184485fd61af2adb29df40cae16a3e",
+    "labels_sha256": "d508ec97c949ecd15296a36250d2f02b46364890673188c6444ef3076566d9e3",
+    "preparation_version": "ibm-bank-2.1",
+    "dataset_id": "8c0facc02257e4e82b558d83"
   },
-  "model_id": "400b0ff63fc7094db5b66d39",
-  "training_device": "GPU",
-  "review_policy": {
-    "version": "separate_v1",
-    "operation_cases": 500,
-    "structure_cases": 50,
-    "structure_scope": "signals_and_form_examples"
+  "transaction_models": {
+    "A_plain": {
+      "rows": 986286,
+      "positive": 1784,
+      "prevalence": 0.0018088059650040657,
+      "ap": 0.48887653136447834,
+      "roc_auc": 0.98457602993981,
+      "precision": 0.9751552795031055,
+      "recall": 0.08800448430493274,
+      "f1": 0.161439588688946,
+      "threshold": 0.6743983995421,
+      "alerts": 161,
+      "false_alerts_per_1000": 0.004055618755614498,
+      "confusion_matrix": [
+        [
+          984498,
+          4
+        ],
+        [
+          1627,
+          157
+        ]
+      ],
+      "top_k": {
+        "100": {
+          "reviewed": 100,
+          "found": 100,
+          "precision": 1.0,
+          "recall": 0.05605381165919283
+        },
+        "500": {
+          "reviewed": 500,
+          "found": 435,
+          "precision": 0.87,
+          "recall": 0.2438340807174888
+        }
+      },
+      "periods": {
+        "normal": {
+          "rows": 985179,
+          "positive": 1129,
+          "prevalence": 0.001145984638324609,
+          "ap": 0.32521640180792827,
+          "roc_auc": 0.9767012935146409,
+          "precision": 0.9655172413793104,
+          "recall": 0.07440212577502214,
+          "f1": 0.13815789473684212,
+          "threshold": 0.6743983995421,
+          "alerts": 87,
+          "false_alerts_per_1000": 0.0030451318998882437,
+          "confusion_matrix": [
+            [
+              984047,
+              3
+            ],
+            [
+              1045,
+              84
+            ]
+          ],
+          "top_k": {
+            "100": {
+              "reviewed": 100,
+              "found": 96,
+              "precision": 0.96,
+              "recall": 0.08503100088573959
+            },
+            "500": {
+              "reviewed": 500,
+              "found": 299,
+              "precision": 0.598,
+              "recall": 0.26483613817537643
+            }
+          },
+          "first_time": "2022-09-08T16:13:00",
+          "last_time": "2022-09-10T23:59:00"
+        },
+        "tail": {
+          "rows": 1107,
+          "positive": 655,
+          "prevalence": 0.5916892502258356,
+          "ap": 0.9658054217369254,
+          "roc_auc": 0.9669425116530432,
+          "precision": 0.9864864864864865,
+          "recall": 0.11145038167938931,
+          "f1": 0.20027434842249658,
+          "threshold": 0.6743983995421,
+          "alerts": 74,
+          "false_alerts_per_1000": 0.9033423667570009,
+          "confusion_matrix": [
+            [
+              451,
+              1
+            ],
+            [
+              582,
+              73
+            ]
+          ],
+          "top_k": {
+            "100": {
+              "reviewed": 100,
+              "found": 98,
+              "precision": 0.98,
+              "recall": 0.14961832061068703
+            },
+            "500": {
+              "reviewed": 500,
+              "found": 479,
+              "precision": 0.958,
+              "recall": 0.7312977099236642
+            }
+          },
+          "first_time": "2022-09-11T00:05:00",
+          "last_time": "2022-09-18T16:18:00"
+        }
+      }
+    },
+    "A_balanced": {
+      "rows": 986286,
+      "positive": 1784,
+      "prevalence": 0.0018088059650040657,
+      "ap": 0.20764322495613277,
+      "roc_auc": 0.9803513202431918,
+      "precision": 0.3164021164021164,
+      "recall": 0.16760089686098656,
+      "f1": 0.21912788567240749,
+      "threshold": 0.9762257396072999,
+      "alerts": 945,
+      "false_alerts_per_1000": 0.6549824290317413,
+      "confusion_matrix": [
+        [
+          983856,
+          646
+        ],
+        [
+          1485,
+          299
+        ]
+      ],
+      "top_k": {
+        "100": {
+          "reviewed": 100,
+          "found": 81,
+          "precision": 0.81,
+          "recall": 0.04540358744394619
+        },
+        "500": {
+          "reviewed": 500,
+          "found": 233,
+          "precision": 0.466,
+          "recall": 0.13060538116591927
+        }
+      },
+      "periods": {
+        "normal": {
+          "rows": 985179,
+          "positive": 1129,
+          "prevalence": 0.001145984638324609,
+          "ap": 0.13440872455040648,
+          "roc_auc": 0.9735691867212959,
+          "precision": 0.20566502463054187,
+          "recall": 0.1479185119574845,
+          "f1": 0.17207624935600205,
+          "threshold": 0.9762257396072999,
+          "alerts": 812,
+          "false_alerts_per_1000": 0.6547033584759724,
+          "confusion_matrix": [
+            [
+              983405,
+              645
+            ],
+            [
+              962,
+              167
+            ]
+          ],
+          "top_k": {
+            "100": {
+              "reviewed": 100,
+              "found": 66,
+              "precision": 0.66,
+              "recall": 0.05845881310894597
+            },
+            "500": {
+              "reviewed": 500,
+              "found": 143,
+              "precision": 0.286,
+              "recall": 0.1266607617360496
+            }
+          },
+          "first_time": "2022-09-08T16:13:00",
+          "last_time": "2022-09-10T23:59:00"
+        },
+        "tail": {
+          "rows": 1107,
+          "positive": 655,
+          "prevalence": 0.5916892502258356,
+          "ap": 0.9632658864633621,
+          "roc_auc": 0.9610281699655475,
+          "precision": 0.9924812030075187,
+          "recall": 0.2015267175572519,
+          "f1": 0.3350253807106599,
+          "threshold": 0.9762257396072999,
+          "alerts": 133,
+          "false_alerts_per_1000": 0.9033423667570009,
+          "confusion_matrix": [
+            [
+              451,
+              1
+            ],
+            [
+              523,
+              132
+            ]
+          ],
+          "top_k": {
+            "100": {
+              "reviewed": 100,
+              "found": 99,
+              "precision": 0.99,
+              "recall": 0.15114503816793892
+            },
+            "500": {
+              "reviewed": 500,
+              "found": 470,
+              "precision": 0.94,
+              "recall": 0.7175572519083969
+            }
+          },
+          "first_time": "2022-09-11T00:05:00",
+          "last_time": "2022-09-18T16:18:00"
+        }
+      }
+    },
+    "B_plain": {
+      "rows": 986286,
+      "positive": 1784,
+      "prevalence": 0.0018088059650040657,
+      "ap": 0.6951813578778046,
+      "roc_auc": 0.9894781381833231,
+      "precision": 0.9918032786885246,
+      "recall": 0.13565022421524664,
+      "f1": 0.23865877712031558,
+      "threshold": 0.9740657390798294,
+      "alerts": 244,
+      "false_alerts_per_1000": 0.002027809377807249,
+      "confusion_matrix": [
+        [
+          984500,
+          2
+        ],
+        [
+          1542,
+          242
+        ]
+      ],
+      "top_k": {
+        "100": {
+          "reviewed": 100,
+          "found": 100,
+          "precision": 1.0,
+          "recall": 0.05605381165919283
+        },
+        "500": {
+          "reviewed": 500,
+          "found": 488,
+          "precision": 0.976,
+          "recall": 0.273542600896861
+        }
+      },
+      "periods": {
+        "normal": {
+          "rows": 985179,
+          "positive": 1129,
+          "prevalence": 0.001145984638324609,
+          "ap": 0.4981784205876958,
+          "roc_auc": 0.9835005831947823,
+          "precision": 1.0,
+          "recall": 0.07617360496014172,
+          "f1": 0.14156378600823044,
+          "threshold": 0.9740657390798294,
+          "alerts": 86,
+          "false_alerts_per_1000": 0.0,
+          "confusion_matrix": [
+            [
+              984050,
+              0
+            ],
+            [
+              1043,
+              86
+            ]
+          ],
+          "top_k": {
+            "100": {
+              "reviewed": 100,
+              "found": 99,
+              "precision": 0.99,
+              "recall": 0.08768821966341896
+            },
+            "500": {
+              "reviewed": 500,
+              "found": 415,
+              "precision": 0.83,
+              "recall": 0.3675819309123118
+            }
+          },
+          "first_time": "2022-09-08T16:13:00",
+          "last_time": "2022-09-10T23:59:00"
+        },
+        "tail": {
+          "rows": 1107,
+          "positive": 655,
+          "prevalence": 0.5916892502258356,
+          "ap": 0.9764180198766745,
+          "roc_auc": 0.9756096737147876,
+          "precision": 0.9873417721518988,
+          "recall": 0.2381679389312977,
+          "f1": 0.3837638376383764,
+          "threshold": 0.9740657390798294,
+          "alerts": 158,
+          "false_alerts_per_1000": 1.8066847335140017,
+          "confusion_matrix": [
+            [
+              450,
+              2
+            ],
+            [
+              499,
+              156
+            ]
+          ],
+          "top_k": {
+            "100": {
+              "reviewed": 100,
+              "found": 98,
+              "precision": 0.98,
+              "recall": 0.14961832061068703
+            },
+            "500": {
+              "reviewed": 500,
+              "found": 483,
+              "precision": 0.966,
+              "recall": 0.7374045801526717
+            }
+          },
+          "first_time": "2022-09-11T00:05:00",
+          "last_time": "2022-09-18T16:18:00"
+        }
+      }
+    },
+    "B_balanced": {
+      "rows": 986286,
+      "positive": 1784,
+      "prevalence": 0.0018088059650040657,
+      "ap": 0.19286348262698372,
+      "roc_auc": 0.987654930314043,
+      "precision": 0.34718100890207715,
+      "recall": 0.0655829596412556,
+      "f1": 0.11032531824611033,
+      "threshold": 0.9761270502034827,
+      "alerts": 337,
+      "false_alerts_per_1000": 0.22305903155879736,
+      "confusion_matrix": [
+        [
+          984282,
+          220
+        ],
+        [
+          1667,
+          117
+        ]
+      ],
+      "top_k": {
+        "100": {
+          "reviewed": 100,
+          "found": 14,
+          "precision": 0.14,
+          "recall": 0.007847533632286996
+        },
+        "500": {
+          "reviewed": 500,
+          "found": 170,
+          "precision": 0.34,
+          "recall": 0.0952914798206278
+        }
+      },
+      "periods": {
+        "normal": {
+          "rows": 985179,
+          "positive": 1129,
+          "prevalence": 0.001145984638324609,
+          "ap": 0.08675365761074799,
+          "roc_auc": 0.9823011371499419,
+          "precision": 0.20363636363636364,
+          "recall": 0.049601417183348095,
+          "f1": 0.07977207977207977,
+          "threshold": 0.9761270502034827,
+          "alerts": 275,
+          "false_alerts_per_1000": 0.2222946286918418,
+          "confusion_matrix": [
+            [
+              983831,
+              219
+            ],
+            [
+              1073,
+              56
+            ]
+          ],
+          "top_k": {
+            "100": {
+              "reviewed": 100,
+              "found": 5,
+              "precision": 0.05,
+              "recall": 0.0044286979627989375
+            },
+            "500": {
+              "reviewed": 500,
+              "found": 97,
+              "precision": 0.194,
+              "recall": 0.08591674047829938
+            }
+          },
+          "first_time": "2022-09-08T16:13:00",
+          "last_time": "2022-09-10T23:59:00"
+        },
+        "tail": {
+          "rows": 1107,
+          "positive": 655,
+          "prevalence": 0.5916892502258356,
+          "ap": 0.9520762135439139,
+          "roc_auc": 0.9515030737012768,
+          "precision": 0.9838709677419355,
+          "recall": 0.09312977099236641,
+          "f1": 0.1701534170153417,
+          "threshold": 0.9761270502034827,
+          "alerts": 62,
+          "false_alerts_per_1000": 0.9033423667570009,
+          "confusion_matrix": [
+            [
+              451,
+              1
+            ],
+            [
+              594,
+              61
+            ]
+          ],
+          "top_k": {
+            "100": {
+              "reviewed": 100,
+              "found": 98,
+              "precision": 0.98,
+              "recall": 0.14961832061068703
+            },
+            "500": {
+              "reviewed": 500,
+              "found": 469,
+              "precision": 0.938,
+              "recall": 0.716030534351145
+            }
+          },
+          "first_time": "2022-09-11T00:05:00",
+          "last_time": "2022-09-18T16:18:00"
+        }
+      }
+    }
   },
-  "review_budgets_policy": "legacy_mixed"
+  "structure": {
+    "rows": 409765,
+    "positive": 3172,
+    "prevalence": 0.007741022293265652,
+    "ap": 0.019541593914693074,
+    "roc_auc": 0.6351101214304582,
+    "precision": 0.07692307692307693,
+    "recall": 0.004728877679697352,
+    "f1": 0.00891000891000891,
+    "threshold": 0.7654267528214392,
+    "alerts": 195,
+    "false_alerts_per_1000": 0.43927617048796264,
+    "confusion_matrix": [
+      [
+        406413,
+        180
+      ],
+      [
+        3157,
+        15
+      ]
+    ],
+    "top_k": {
+      "100": {
+        "reviewed": 100,
+        "found": 9,
+        "precision": 0.09,
+        "recall": 0.0028373266078184113
+      },
+      "500": {
+        "reviewed": 500,
+        "found": 38,
+        "precision": 0.076,
+        "recall": 0.01197982345523329
+      }
+    },
+    "episodes": 409765,
+    "coverage": {
+      "test_positive_operations": 1784,
+      "in_any_candidate": 1467,
+      "in_structure_alerts": 14,
+      "in_operation_alerts": 242,
+      "additional_from_structures": 14
+    }
+  }
 }

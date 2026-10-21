@@ -1,0 +1,22 @@
+name: hunterilka-v2
+services:
+  postgres:
+    image: postgres:16
+    container_name: hunterilka-v2-postgres
+    environment:
+      POSTGRES_USER: hunterilka
+      POSTGRES_PASSWORD: hunterilka
+      POSTGRES_DB: hunterilka_v2
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hunterilka -d hunterilka_v2"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - hunterilka_pg:/var/lib/postgresql/data
+      - ./db/init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql:ro
+
+volumes:
+  hunterilka_pg:

@@ -1,103 +1,99 @@
-"""Один проход истории. Таблицы записываются порциями, без списка всех признаков в памяти."""
+"""Шаг 2. Один проход истории через граф: признаки операций и кандидаты структур.
+
+Результат: artifacts/features/*.parquet, artifacts/structures/*.parquet,
+artifacts/candidates.jsonl (полные кандидаты для оценки второго уровня).
+"""
 
 import json
-import platform
+import shutil
 import time
 
 import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
 
-from src.data import validate_split
+from src.data import split_names
+from src.contracts import feature_contract, validate_events
 from src.graph import RollingGraph
 from src.pipeline import process_group
-from src.storage import ROOT, fingerprint, load_config, logic_hash, read_json, write_json
+from src.storage import ROOT, file_hash, load_config, load_table, read_json, save_table, write_json
 
 
-def append_table(writer, rows, destination):
-    table = pa.Table.from_pandas(pd.DataFrame(rows), preserve_index=False)
-    if writer is None:
-        writer = pq.ParquetWriter(destination, table.schema, compression="zstd")
-    writer.write_table(table.cast(writer.schema))
-    rows.clear()
-    return writer
+CHUNK_ROWS = 200000
+
+
+def write_chunk(rows, folder, number):
+    """Записывает накопленные строки отдельным файлом, чтобы не держать всё в памяти."""
+    if rows:
+        save_table(pd.DataFrame(rows), folder / f"part-{number:05d}.parquet")
+        rows.clear()
+    return number + 1
 
 
 def main():
     config = load_config()
-    manifest = read_json(ROOT / "data/processed/dataset_manifest.json")
-    validate_split(manifest)
-    events = pd.read_parquet(ROOT / "data/processed/events.parquet")
-    if len(events) > config["max_active_events"] and manifest["history_days"] <= config["window_days"]:
-        raise ValueError("Весь профиль входит в окно. Увеличьте max_active_events с учётом памяти.")
-    labels = pd.read_parquet(ROOT / "data/processed/labels.parquet").set_index("transaction_id").is_laundering
-    label_by_id = labels.to_dict()
+    manifest = read_json(ROOT / "data" / "manifest.json")
+    validate_events(ROOT / "data" / "events.parquet", manifest)
+    if file_hash(ROOT / "data" / "labels.parquet") != manifest.get("labels_sha256"):
+        raise ValueError("Метки не соответствуют подготовленному набору. Повторите prepare_data.")
+    events = load_table(ROOT / "data" / "events.parquet")
+    labels = load_table(ROOT / "data" / "labels.parquet")
+    label_by_id = dict(zip(labels.transaction_id, labels.is_laundering))
+    parts = split_names(events.timestamp, manifest["train_end"], manifest["validation_end"])
+    events["split"] = parts.to_numpy()
+
+    output = ROOT / "artifacts"
+    for name in ["features", "structures"]:
+        shutil.rmtree(output / name, ignore_errors=True)
+        (output / name).mkdir(parents=True)
+
     state = RollingGraph(config)
-    feature_rows, candidate_rows, diagnostics = [], [], []
-    feature_writer = None
-    structure_writer = None
+    feature_rows, structure_rows, diagnostics = [], [], []
+    feature_part, structure_part = 0, 0
     total_rows, total_candidates = 0, 0
     started = time.perf_counter()
-    output = ROOT / "artifacts"
-    output.mkdir(exist_ok=True)
-    (ROOT / "reports").mkdir(exist_ok=True)
-    manifest_path = output / "feature_manifest.json"
-    manifest_path.unlink(missing_ok=True)
 
-    try:
-        with (output / "candidates.jsonl").open("w", encoding="utf-8") as stream:
-            for number, (timestamp, table) in enumerate(events.groupby("timestamp", sort=False)):
-                group = table.to_dict("records")
-                rows, _, candidates, info = process_group(state, group, config)
-                part = "train" if timestamp < manifest["train_end"] else ("validation" if timestamp < manifest["validation_end"] else "test")
-                for event, row in zip(group, rows):
-                    identifier = event["transaction_id"]
-                    row.update(transaction_id=identifier, timestamp=timestamp,
-                               is_laundering=label_by_id[identifier], split=part)
-                    feature_rows.append(row)
-                total_rows += len(rows)
+    with (output / "candidates.jsonl").open("w", encoding="utf-8") as stream:
+        for number, (timestamp, table) in enumerate(events.groupby("timestamp", sort=False)):
+            group = table.drop(columns="split").to_dict("records")
+            part = table.split.iloc[0]
+            rows, _, candidates, info = process_group(state, group, config)
 
-                for candidate in candidates:
-                    row = dict(candidate["features"])
-                    row.update(candidate_id=candidate["candidate_id"], case_key=candidate["case_key"], timestamp=timestamp,
-                               family=candidate["family"], split=part)
-                    candidate_rows.append(row)
-                    stream.write(json.dumps(candidate, ensure_ascii=False) + "\n")
-                total_candidates += len(candidates)
-                info.update(timestamp=timestamp, split=part)
-                diagnostics.append(info)
+            for event, row in zip(group, rows):
+                row.update(transaction_id=event["transaction_id"], timestamp=timestamp,
+                           is_laundering=label_by_id[event["transaction_id"]], split=part)
+                feature_rows.append(row)
+            total_rows += len(rows)
 
-                if len(feature_rows) >= 25000:
-                    feature_writer = append_table(feature_writer, feature_rows, output / "features.parquet")
-                if len(candidate_rows) >= 10000:
-                    structure_writer = append_table(structure_writer, candidate_rows, output / "structures.parquet")
-                if number % 200 == 0:
-                    elapsed = time.perf_counter() - started
-                    print(f"Групп: {number + 1}; операций: {total_rows}/{len(events)}; структур: {total_candidates}; секунд: {elapsed:.0f}", flush=True)
+            for candidate in candidates:
+                row = dict(candidate["features"])
+                row.update(candidate_id=candidate["candidate_id"], case_key=candidate["case_key"],
+                           timestamp=timestamp, family=candidate["family"], split=part)
+                structure_rows.append(row)
+                stream.write(json.dumps(candidate, ensure_ascii=False) + "\n")
+            total_candidates += len(candidates)
+            info.update(timestamp=timestamp, split=part)
+            diagnostics.append(info)
 
-        if feature_rows:
-            feature_writer = append_table(feature_writer, feature_rows, output / "features.parquet")
-        if candidate_rows:
-            structure_writer = append_table(structure_writer, candidate_rows, output / "structures.parquet")
-    finally:
-        for writer in [feature_writer, structure_writer]:
-            if writer is not None:
-                writer.close()
+            if len(feature_rows) >= CHUNK_ROWS:
+                feature_part = write_chunk(feature_rows, output / "features", feature_part)
+            if len(structure_rows) >= CHUNK_ROWS:
+                structure_part = write_chunk(structure_rows, output / "structures", structure_part)
+            if number % 500 == 0:
+                elapsed = time.perf_counter() - started
+                print(f"Минут: {number + 1}; операций: {total_rows}/{len(events)}; структур: {total_candidates}; секунд: {elapsed:.0f}", flush=True)
 
-    if not total_candidates:
+    write_chunk(feature_rows, output / "features", feature_part)
+    write_chunk(structure_rows, output / "structures", structure_part)
+    if total_candidates == 0:
         raise ValueError("Кандидатов нет. Проверьте данные и настройки поиска.")
-    pd.DataFrame(diagnostics).to_csv(ROOT / "reports/search_diagnostics.csv", index=False)
-    write_json(manifest_path, {
-        "config": config, "config_hash": fingerprint(config),
-        "data_hash": manifest["events_sha256"], "logic_hash": logic_hash(),
+
+    (ROOT / "reports").mkdir(exist_ok=True)
+    pd.DataFrame(diagnostics).to_csv(ROOT / "reports" / "search_diagnostics.csv", index=False)
+    write_json(output / "feature_manifest.json", {
         "rows": total_rows, "candidates": total_candidates,
-        "seconds": time.perf_counter() - started, "python": platform.python_version(),
-        "platform": platform.platform(), "active_events": len(state.events),
+        "seconds": time.perf_counter() - started,
         "nodes": state.graph.number_of_nodes(), "edges": state.graph.number_of_edges(),
-        "group_ms_p50": float(pd.Series([x["group_seconds"] for x in diagnostics]).quantile(.5) * 1000),
-        "group_ms_p95": float(pd.Series([x["group_seconds"] for x in diagnostics]).quantile(.95) * 1000),
-        "incomplete_groups": sum(x["search_truncated"] for x in diagnostics),
-        "groups": len(diagnostics), "scope": manifest["scope"],
+        "scope": manifest["scope"],
+        "dataset_id": manifest["dataset_id"], "feature_contract": feature_contract(config),
     })
     print("Признаки готовы. Секунд:", round(time.perf_counter() - started, 1))
 

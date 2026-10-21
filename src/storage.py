@@ -1,8 +1,10 @@
-"""Небольшие операции с файлами и паспортами запуска."""
+"""Небольшие операции с файлами: пути проекта, JSON, таблицы, короткий хеш."""
 
 import hashlib
 import json
 from pathlib import Path
+
+import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,36 +18,32 @@ def read_json(path):
 def write_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(
-        json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False),
-        encoding="utf-8",
-    )
-    temporary.replace(path)
-
-
-def fingerprint(value):
-    text = json.dumps(value, sort_keys=True, ensure_ascii=False)
-    return hashlib.sha256(text.encode()).hexdigest()
-
-
-def file_hash(path):
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def load_config():
     return read_json(ROOT / "config.json")
 
 
-def logic_hash():
-    # Изменение расчётного кода требует пересборки признаков и моделей.
-    names = ["data.py", "graph.py", "context.py", "features.py", "patterns.py", "pipeline.py"]
-    sources = {}
-    for name in names:
-        text = (ROOT / "src" / name).read_text(encoding="utf-8")
-        sources[name] = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    return fingerprint(sources)
+def save_table(frame, path):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    frame.to_parquet(path, index=False)
+
+
+def load_table(path, columns=None):
+    return pd.read_parquet(path, columns=columns)
+
+
+def short_hash(value):
+    # Устойчивый идентификатор для кандидата или случая: одинаковый вход даёт одинаковый хеш.
+    text = json.dumps(value, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:24]
+
+
+def file_hash(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for block in iter(lambda: stream.read(4 * 1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()

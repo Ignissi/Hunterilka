@@ -1,8 +1,22 @@
-name: Проверка ядра
+name: Проверка
 on: [push, pull_request]
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hunterilka
+          POSTGRES_PASSWORD: hunterilka
+          POSTGRES_DB: hunterilka_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      HUNTERILKA_TEST_DB: postgresql://hunterilka:hunterilka@localhost:5432/hunterilka_test
+      HUNTERILKA_REQUIRE_DB: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -4,31 +4,65 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 .env
-*kaggle*.json
-data/raw/*
-data/processed/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-runs/*
-!runs/.gitkeep
-artifacts/features.parquet
-artifacts/structures.parquet
+
+# Локальные данные и большие артефакты расчёта
+data/raw/
+data/*.parquet
+data/manifest.json
+data/rejected.csv
+artifacts/features/
+artifacts/structures/
 artifacts/candidates.jsonl
-reports/errors.csv
 catboost_info/
 *.tmp
-*.download
 *.zip
 
-# Личные материалы хранятся за пределами репозитория.
-[Dd][Ee][Ff][Ee][Nn][Ss][Ee]*
-ml_walkthrough*
-implementation_notes*
+# Личные материалы
 private/
-private_materials/
-[Pp][Rr][Ii][Vv][Aa][Tt][Ee]_*
-Hunterilka_Private*
 *ЛИЧНОЕ*
 
-publication/
-reports/*.log
+# Локальные журналы запуска
+*.log
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+.env
+
+# Локальные данные и большие артефакты расчёта
+data/raw/
+data/*.parquet
+data/manifest.json
+data/rejected.csv
+artifacts/features/
+artifacts/structures/
+artifacts/candidates.jsonl
+catboost_info/
+*.tmp
+*.zip
+
+# Личные материалы
+private/
+*ЛИЧНОЕ*
+
+# Локальные журналы запуска
+*.log
+
+# Поставка и входящие рабочие данные
+dist/
+incoming/
+.env.*
+!.env.example
+# Учебные материалы не входят в публичный проект
+RUN_GUIDE.md
+docs/code_map.md
+docs/system_guide.md
+docs/validation.md
+
+# Обученные модели поставляются отдельным комплектом
+artifacts/*.cbm
+artifacts/*.joblib
+artifacts/model_meta.json
+artifacts/feature_manifest.json

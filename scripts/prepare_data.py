@@ -1,25 +1,22 @@
-"""Подготовка опубликованного набора без искусственных обучающих строк."""
+"""Шаг 1. Исходный IBM CSV -> data/events.parquet, data/labels.parquet, data/manifest.json."""
 
 import argparse
 
-from src.data import prepare_data, validate_split
+from src.data import prepare_data
+from src.storage import ROOT
 
 
 def main():
     parser = argparse.ArgumentParser(description="Подготовка IBM HI-Small")
     parser.add_argument("--input", required=True, help="Путь к HI-Small_Trans.csv")
-    parser.add_argument("--limit", type=int, default=0, help="0 означает весь набор")
-    parser.add_argument("--output", default="data/processed")
+    parser.add_argument("--limit", type=int, default=0, help="0: весь файл; N: первые N строк для быстрой проверки")
     args = parser.parse_args()
-    if args.limit < 0:
-        parser.error("Лимит не может быть отрицательным.")
-    manifest = prepare_data(args.input, args.output, args.limit)
-    print("Подготовка завершена:", manifest["rows"], "операций")
+
+    manifest = prepare_data(args.input, ROOT / "data", args.limit)
+    print("Операций:", manifest["rows"], "; положительных:", manifest["positive"])
     print("Дней истории:", round(manifest["history_days"], 2))
-    print("Временные части:", manifest["parts"])
+    print("Части:", manifest["parts"])
     print("Границы validation и test:", manifest["train_end"], manifest["validation_end"])
-    validate_split(manifest)
-    print("Хронологическое разделение проверено.")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,17 @@
+{
+  "events": [
+    {
+      "transaction_id": 9000001,
+      "timestamp": "2026-10-21T12:07:00",
+      "source_bank": "01",
+      "source_account": "A001",
+      "target_bank": "02",
+      "target_account": "B002",
+      "amount_paid": "15000.00",
+      "payment_currency": "USD",
+      "amount_received": "15000.00",
+      "receiving_currency": "USD",
+      "payment_format": "Wire"
+    }
+  ]
+}

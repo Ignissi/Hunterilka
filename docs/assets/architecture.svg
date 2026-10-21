@@ -1,67 +1,89 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1060" viewBox="0 0 1240 1060" role="img" aria-labelledby="title desc">
-<title id="title">Схема 1. Архитектура Hunterилка</title>
-<desc id="desc">Подготовленные события поступают полными временными группами. CatBoost оценивает операции по прошлому состоянию графа. После добавления группы независимый поиск выделяет структуры для Isolation Forest. Оба канала передают отдельные сигналы в сохранённый случай и рабочее место специалиста.</desc>
-<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#66778b"/></marker></defs>
-<rect width="1240" height="1060" fill="#f4f6fa" rx="20"/>
-<style>text{font-family:DejaVu Sans,sans-serif;fill:#18283d}.title{font-size:30px;font-weight:700}.sub{font-size:16px;fill:#55657a}.h{font-size:20px;font-weight:700}.body{font-size:16px}.kicker{font-size:15px;font-weight:700;letter-spacing:1px}.line{fill:none;stroke:#66778b;stroke-width:2;marker-end:url(#arrow)}</style>
-<text x="40" y="53" class="title">Hunterилка  /  архитектура системы</text>
-<text x="40" y="83" class="sub">Схема 1 · два уровня анализа, общий временной контракт, сохранённый результат</text>
-<rect x="40" y="110" width="1160" height="110" rx="12" fill="#172a44" stroke="#172a44"/>
-<text x="64" y="143" class="kicker" style="fill:#a8c8f4">ВХОД И ПОДГОТОВКА</text>
-<text x="64" y="174" class="h" style="fill:#ffffff">IBM AML CSV → проверка и сортировка → события Parquet → группы времени t</text>
-<text x="64" y="201" class="body" style="fill:#d0dbea">Метки хранятся отдельно. Они используются только при обучении и оценке качества.</text>
-<path d="M 210 220 V 235 H 20 V 340 H 35" class="line"/>
-<text x="40" y="261" class="kicker" style="fill:#235fab">01  ОЦЕНКА ОПЕРАЦИЙ ПО ПРОШЛОМУ</text>
-<rect x="40" y="280" width="350" height="120" rx="12" fill="#eaf1fc" stroke="#dbe2eb"/>
-<text x="60" y="312" class="h">Состояние графа S(t−)</text>
-<text x="60" y="341" class="body">Истечение старых событий</text>
-<text x="60" y="365" class="body">История счетов и связей</text>
-<text x="60" y="389" class="body">Окна 1 ч, 24 ч и 30 дней</text>
-<path d="M 390 340 H 430" class="line"/>
-<rect x="440" y="280" width="350" height="120" rx="12" fill="#fff" stroke="#dbe2eb"/>
-<text x="460" y="312" class="h">Признаки операции</text>
-<text x="460" y="341" class="body">Поля нового перевода</text>
-<text x="460" y="365" class="body">Прошлые агрегаты и топология</text>
-<text x="460" y="389" class="body">Один контекст для всей группы</text>
-<path d="M 790 340 H 830" class="line"/>
-<rect x="840" y="280" width="360" height="120" rx="12" fill="#eaf1fc" stroke="#dbe2eb"/>
-<text x="860" y="312" class="h">CatBoost</text>
-<text x="860" y="341" class="body">Оценка каждой операции</text>
-<text x="860" y="365" class="body">Сохранённый вектор признаков</text>
-<text x="860" y="389" class="body">SHAP по запросу</text>
-<path d="M 1020 400 V 430 H 20 V 540 H 35" class="line"/>
-<text x="500" y="420" class="sub">После оценки всей группы</text>
-<text x="40" y="463" class="kicker" style="fill:#0f7465">02  НЕЗАВИСИМЫЙ АНАЛИЗ СТРУКТУР</text>
-<rect x="40" y="480" width="350" height="120" rx="12" fill="#e7f5f0" stroke="#dbe2eb"/>
-<text x="60" y="512" class="h">Обновление графа S(t)</text>
-<text x="60" y="541" class="body">Добавление целой группы</text>
-<text x="60" y="565" class="body">События, индексы и связи</text>
-<text x="60" y="589" class="body">Порядок задаёт pipeline.py</text>
-<path d="M 390 540 H 430" class="line"/>
-<rect x="440" y="480" width="350" height="120" rx="12" fill="#fff" stroke="#dbe2eb"/>
-<text x="460" y="512" class="h">Поиск кандидатов</text>
-<text x="460" y="541" class="body">Цепочки, кольца, звёзды</text>
-<text x="460" y="565" class="body">Обход от каждой операции</text>
-<text x="460" y="589" class="body">Без фильтра по CatBoost</text>
-<path d="M 790 540 H 830" class="line"/>
-<rect x="840" y="480" width="360" height="120" rx="12" fill="#e7f5f0" stroke="#dbe2eb"/>
-<text x="860" y="512" class="h">Isolation Forest</text>
-<text x="860" y="541" class="body">Признаки найденной структуры</text>
-<text x="860" y="565" class="body">Необычность сочетания</text>
-<text x="860" y="589" class="body">Без меток и баллов CatBoost</text>
-<path d="M 1200 340 H 1220 V 730 H 1195" class="line"/>
-<path d="M 1020 600 V 680" class="line"/>
-<text x="40" y="653" class="kicker" style="fill:#754a9a">03  СЛУЧАЙ КАК ЕДИНИЦА РАССМОТРЕНИЯ</text>
-<rect x="40" y="685" width="1160" height="125" rx="12" fill="#f1ecf7" stroke="#dbe2eb"/>
-<text x="64" y="719" class="h">CaseService · снимок основания и версии</text>
-<text x="64" y="752" class="body">Сигнал операции / сигнал структуры / оба сигнала. Оценки сохраняются раздельно.</text>
-<text x="64" y="783" class="body">JSON: детали и решения. Parquet: индекс. Случай сохраняется после изменения рабочего графа.</text>
-<path d="M 620 810 V 858" class="line"/>
-<text x="40" y="847" class="kicker" style="fill:#235fab">04  РАБОЧЕЕ МЕСТО СПЕЦИАЛИСТА</text>
-<rect x="40" y="865" width="1160" height="112" rx="12" fill="#fff" stroke="#dbe2eb"/>
-<text x="64" y="899" class="h">Очереди операций и структур → граф случая → объяснение → решение</text>
-<text x="64" y="932" class="body">Streamlit + PyVis · до 40 счетов / 80 связей, расширение до 100 / 200</text>
-<text x="64" y="958" class="sub">Полный активный граф остаётся в вычислительном контуре. В браузере только выбранный случай.</text>
-<text x="40" y="1012" class="body">Обучение отдельно: признаки → train / validation → модели и контракты → оценка на test</text>
-<text x="40" y="1040" class="sub">Воспроизведение: группы событий, пауза, контрольная точка и восстановление повторным проходом.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1104" viewBox="0 0 1280 1104" role="img" aria-labelledby="title desc">
+  <title id="title">Hunterилка — два уровня анализа финансового потока</title>
+  <desc id="desc">Новые операции поступают завершёнными минутами. CatBoost оценивает их по предшествующей истории. Затем минута добавляется в динамический граф, поиск выделяет связанные структуры, а Isolation Forest оценивает их необычность независимо от порога CatBoost. PostgreSQL сохраняет результаты минуты и позицию потока вместе. Рабочее место AML читает две очереди и записывает решения. Обучение моделей выполняется отдельно.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 2L10 6L2 10" fill="none" stroke="#9eb1ca" stroke-width="1.8" stroke-linejoin="round"/></marker>
+    <marker id="blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 2L10 6L2 10" fill="none" stroke="#91b9ff" stroke-width="1.8" stroke-linejoin="round"/></marker>
+  </defs>
+  <style>
+    text { font-family: "DejaVu Sans", Arial, sans-serif; fill: #edf3fd; }
+    .eyebrow { font-size: 16px; font-weight: 700; letter-spacing: 2.3px; fill: #99afcd; }
+    .title { font-size: 31px; font-weight: 700; letter-spacing: -.8px; }
+    .heading { font-size: 24px; font-weight: 700; letter-spacing: -.3px; }
+    .body { font-size: 20px; fill: #c6d4e9; }
+    .small { font-size: 18px; fill: #9eb1ca; }
+    .kicker { font-size: 17px; font-weight: 700; letter-spacing: .9px; }
+    .line { fill: none; stroke: #9eb1ca; stroke-width: 2; marker-end: url(#arrow); }
+    .blue-line { fill: none; stroke: #91b9ff; stroke-width: 2; marker-end: url(#blue); }
+  </style>
+
+  <rect width="1280" height="1104" rx="24" fill="#0e1727"/>
+  <rect x="0" y="0" width="1280" height="7" rx="3" fill="#ec6578"/>
+  <text x="48" y="48" class="eyebrow">HUNTERILKA / СИСТЕМА AML-АНАЛИЗА</text>
+  <text x="48" y="93" class="title">Один поток. Два масштаба анализа.</text>
+  <g fill="none" stroke="#4c6689" stroke-width="2">
+    <path d="M1100 48L1150 77L1206 43M1100 48L1114 102L1150 77L1218 101L1206 43"/>
+    <circle cx="1100" cy="48" r="5" fill="#0e1727"/><circle cx="1114" cy="102" r="5" fill="#0e1727"/>
+    <circle cx="1150" cy="77" r="7" fill="#ec6578" stroke="#ec6578"/>
+    <circle cx="1206" cy="43" r="5" fill="#0e1727"/><circle cx="1218" cy="101" r="5" fill="#0e1727"/>
+  </g>
+
+  <rect x="48" y="132" width="1184" height="100" rx="14" fill="#192940" stroke="#344d70"/>
+  <rect x="48" y="132" width="5" height="100" rx="2" fill="#91b9ff"/>
+  <text x="80" y="173" class="heading">Поток финансовых операций</text>
+  <text x="80" y="207" class="body">Файловый вход · завершённые минуты · без обучающих меток</text>
+  <rect x="990" y="159" width="212" height="44" rx="22" fill="#233b59"/>
+  <text x="1096" y="187" text-anchor="middle" class="kicker" fill="#c6d4e9">НОВЫЕ ДАННЫЕ</text>
+  <path d="M640 232V264" class="line"/>
+
+  <rect x="48" y="264" width="1184" height="402" rx="14" fill="#111e30" stroke="#2a3c55"/>
+  <text x="80" y="298" class="kicker" fill="#99afcd">СЕРВИС АНАЛИЗА</text>
+  <text x="1200" y="298" text-anchor="end" class="small">Граф в памяти · окно 30 дней</text>
+
+  <rect x="80" y="320" width="556" height="120" rx="11" fill="#1c283b" stroke="#3c4053"/>
+  <text x="104" y="351" class="kicker" style="fill:#ff95a1">01 / ОТДЕЛЬНАЯ ОПЕРАЦИЯ</text>
+  <text x="104" y="387" class="heading">Поля перевода + прошлый граф</text>
+  <text x="104" y="418" class="small">История счетов и их связей до текущей минуты</text>
+  <path d="M636 380H716" class="line"/>
+  <rect x="720" y="320" width="480" height="120" rx="11" fill="#302836" stroke="#775162"/>
+  <text x="748" y="364" class="heading" style="fill:#ffadba">CatBoost</text>
+  <text x="748" y="401" class="body">Оценка операции · SHAP</text>
+
+  <path d="M358 440V500" class="line"/>
+  <text x="384" y="476" class="small">Добавить минуту в граф</text>
+
+  <rect x="80" y="500" width="556" height="120" rx="11" fill="#162d32" stroke="#2d514e"/>
+  <text x="104" y="531" class="kicker" style="fill:#74dbc5">02 / СВЯЗАННЫЕ ПЕРЕВОДЫ</text>
+  <text x="104" y="566" class="body" style="fill:#edf3fd">Цепочки · кольца · сбор · распределение</text>
+  <text x="104" y="598" class="small">Поиск независимо от оценки CatBoost</text>
+  <path d="M636 560H716" class="line"/>
+  <rect x="720" y="500" width="480" height="120" rx="11" fill="#183b39" stroke="#3c7167"/>
+  <text x="748" y="544" class="heading" style="fill:#8be5d1">Isolation Forest</text>
+  <text x="748" y="581" class="body">Необычность структуры</text>
+
+  <path d="M1200 380H1254V690H400" fill="none" stroke="#9eb1ca" stroke-width="2"/>
+  <path d="M960 620V690" fill="none" stroke="#9eb1ca" stroke-width="2"/>
+  <circle cx="960" cy="690" r="4" fill="#9eb1ca"/>
+  <path d="M400 690V714" class="line"/>
+
+  <rect x="48" y="718" width="704" height="145" rx="14" fill="#1c304b" stroke="#5578a5"/>
+  <text x="80" y="758" class="heading" style="fill:#b4ceff">PostgreSQL · память системы</text>
+  <text x="80" y="793" class="body">Операции · оценки · случаи · журнал решений</text>
+  <text x="80" y="831" class="small">Результаты минуты и позиция потока сохраняются вместе</text>
+
+  <path d="M752 768H796" class="blue-line"/>
+  <path d="M800 825H756" class="blue-line"/>
+  <rect x="800" y="718" width="432" height="145" rx="14" fill="#1b2638" stroke="#506077"/>
+  <text x="826" y="758" class="heading">Рабочее место AML</text>
+  <text x="826" y="793" class="body">Две очереди · граф · объяснение</text>
+  <text x="826" y="831" class="body">Решение → статус и комментарий</text>
+
+  <circle cx="59" cy="893" r="7" fill="#91b9ff"/>
+  <path d="M56 893L58 895L62 890" fill="none" stroke="#0e1727" stroke-width="1.6"/>
+  <text x="80" y="900" class="body">Перезапуск: восстановление графа и продолжение с сохранённой минуты.</text>
+
+  <rect x="48" y="938" width="1184" height="122" rx="14" fill="#152030" stroke="#3b495d" stroke-dasharray="6 5"/>
+  <text x="80" y="973" class="kicker" style="fill:#a9b9ce">ОБУЧЕНИЕ — ОТДЕЛЬНО ОТ РАБОЧЕГО ПОТОКА</text>
+  <text x="80" y="1009" class="body" style="fill:#edf3fd">История → train / validation / test → сохранённые модели → сервис анализа</text>
+  <text x="80" y="1040" class="small">Модели загружаются при старте. Открытие интерфейса не запускает обучение.</text>
 </svg>

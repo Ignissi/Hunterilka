@@ -1,10 +1,17 @@
-"""Динамический граф и согласованное истечение трёх временных окон."""
+"""Динамический граф операций: скользящее окно 30 дней и короткие окна 1 ч и 24 ч.
+
+Узел графа — счёт (банк:номер). Ребро — факт переводов между двумя счетами.
+Каждый перевод хранится отдельно как событие и удаляется, когда выходит из окна.
+"""
 
 from collections import Counter, defaultdict, deque
 from datetime import datetime, timedelta
 from decimal import Decimal
 
 import networkx as nx
+
+
+SHORT_WINDOWS_HOURS = [1, 24]
 
 
 def parse_time(value):
@@ -15,46 +22,40 @@ class RollingGraph:
     def __init__(self, config):
         self.config = config
         self.graph = nx.DiGraph()
-        self.events = {}
-        self.expiry = deque()
-        self.pair_events = defaultdict(dict)
-        self.incoming = defaultdict(dict)
-        self.outgoing = defaultdict(dict)
-        self.first_time = None
+        self.events = {}                       # transaction_id -> событие
+        self.expiry = deque()                  # (время, transaction_id) для окна 30 дней
+        self.pair_events = defaultdict(dict)   # (источник, получатель) -> {transaction_id}
+        self.incoming = defaultdict(dict)      # счёт -> {transaction_id входящих}
+        self.outgoing = defaultdict(dict)      # счёт -> {transaction_id исходящих}
         self.current_time = None
-        self.expired_ids = []
 
-        # Каждое короткое окно имеет собственную очередь истечения.
+        # Короткие окна считают число операций и суммы по счёту и валюте.
         self.windows = {}
-        for hours in [1, 24]:
+        for hours in SHORT_WINDOWS_HOURS:
             self.windows[hours] = {
                 "queue": deque(), "count": Counter(),
                 "currency_count": Counter(), "sum": defaultdict(Decimal),
             }
 
     def advance(self, timestamp):
-        self.expired_ids = []
+        """Сдвигает время вперёд и удаляет всё, что вышло из окон."""
         moment = parse_time(timestamp)
         if self.current_time is not None and moment < self.current_time:
-            raise ValueError("Получено опоздавшее событие. Пересоберите профиль по времени.")
-
+            raise ValueError("Получено опоздавшее событие: " + str(timestamp))
         self.current_time = moment
-        if self.first_time is None:
-            self.first_time = moment
 
-        for hours, state in self.windows.items():
+        for hours, window in self.windows.items():
             boundary = moment - timedelta(hours=hours)
-            while state["queue"] and state["queue"][0][0] <= boundary:
-                _, event = state["queue"].popleft()
-                self.change_statistics(state, event, -1)
+            while window["queue"] and window["queue"][0][0] <= boundary:
+                _, event = window["queue"].popleft()
+                self.change_statistics(window, event, -1)
 
         boundary = moment - timedelta(days=self.config["window_days"])
         while self.expiry and self.expiry[0][0] <= boundary:
             _, identifier = self.expiry.popleft()
             self.remove(identifier)
-            self.expired_ids.append(identifier)
 
-    def change_statistics(self, state, event, sign):
+    def change_statistics(self, window, event, sign):
         sides = [
             ("out", event["source_key"], event["payment_currency"], event["amount_paid"]),
             ("in", event["target_key"], event["receiving_currency"], event["amount_received"]),
@@ -62,22 +63,21 @@ class RollingGraph:
         for direction, account, currency, amount in sides:
             key = (direction, account)
             currency_key = (direction, account, currency)
-            state["count"][key] += sign
-            state["currency_count"][currency_key] += sign
-            state["sum"][currency_key] += sign * Decimal(amount)
+            window["count"][key] += sign
+            window["currency_count"][currency_key] += sign
+            window["sum"][currency_key] += sign * Decimal(str(amount))
 
-            if state["count"][key] == 0:
-                del state["count"][key]
-            if state["currency_count"][currency_key] == 0:
-                del state["currency_count"][currency_key]
-                del state["sum"][currency_key]
+            if window["count"][key] == 0:
+                del window["count"][key]
+            if window["currency_count"][currency_key] == 0:
+                del window["currency_count"][currency_key]
+                del window["sum"][currency_key]
 
     def add_group(self, events):
+        """Добавляет все операции одной минуты. Группа добавляется только целиком."""
         identifiers = [event["transaction_id"] for event in events]
         if len(set(identifiers)) != len(identifiers) or any(i in self.events for i in identifiers):
             raise ValueError("Группа содержит повторный transaction_id.")
-        if len(self.events) + len(events) > self.config["max_active_events"]:
-            raise ValueError("Достигнут лимит активных операций. Измените профиль или явный лимит.")
         if any(parse_time(event["timestamp"]) != self.current_time for event in events):
             raise ValueError("Добавляется только полная группа текущего времени.")
 
@@ -91,9 +91,9 @@ class RollingGraph:
             self.incoming[target][identifier] = None
             self.graph.add_edge(source, target, count=len(self.pair_events[(source, target)]))
 
-            for state in self.windows.values():
-                state["queue"].append((self.current_time, event))
-                self.change_statistics(state, event, 1)
+            for window in self.windows.values():
+                window["queue"].append((self.current_time, event))
+                self.change_statistics(window, event, 1)
 
     def remove(self, identifier):
         event = self.events.pop(identifier)
@@ -117,10 +117,11 @@ class RollingGraph:
                 self.graph.remove_node(node)
 
     def statistics(self, hours, direction, account, currency):
-        state = self.windows[hours]
+        """(операций по счёту, операций по счёту в валюте, сумма в валюте) за окно."""
+        window = self.windows[hours]
         key = (direction, account, currency)
         return (
-            state["count"].get((direction, account), 0),
-            state["currency_count"].get(key, 0),
-            float(state["sum"].get(key, 0)),
+            window["count"].get((direction, account), 0),
+            window["currency_count"].get(key, 0),
+            float(window["sum"].get(key, 0)),
         )

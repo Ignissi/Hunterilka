@@ -1,14 +1,18 @@
-"""Кандидаты имеют форму, но ещё не имеют решения об аномальности."""
+"""Поиск связанных структур вокруг новых операций.
 
-from collections import Counter, defaultdict
+Кандидат — это группа переводов определённой формы. Форма ещё не означает
+аномальность: решение принимает Isolation Forest по признакам структуры.
+"""
+
 import heapq
+from collections import Counter, defaultdict
 from datetime import timedelta
 from itertools import islice
 
 import numpy as np
 
 from src.graph import parse_time
-from src.storage import fingerprint
+from src.storage import short_hash
 
 
 FAMILY_NAMES = {
@@ -20,6 +24,7 @@ FAMILY_NAMES = {
 
 
 def recent_events(state, index, node, budget, cutoff, maximum):
+    """Последние переводы счёта (не старше cutoff), с учётом бюджета просмотра."""
     identifiers = index.get(node, {})
     result = []
 
@@ -38,14 +43,14 @@ def recent_events(state, index, node, budget, cutoff, maximum):
 
 def make_candidate(family, events, anchors, detected_at):
     unique = {event["transaction_id"]: event for event in events}
-    ordered = sorted(unique.values(), key=lambda e: (e["timestamp"], e["source_row"]))
+    ordered = sorted(unique.values(), key=lambda e: (e["timestamp"], e["transaction_id"]))
     identifiers = [event["transaction_id"] for event in ordered]
-    identifier = fingerprint([family, sorted(identifiers)])[:24]
-    episode = detected_at[:13]
+    episode = detected_at[:13]   # один и тот же эпизод в пределах часа получает один case_key
     return {
-        "candidate_id": identifier, "family": family, "detected_at": detected_at,
+        "candidate_id": short_hash([family, sorted(identifiers)]),
+        "case_key": short_hash([family, sorted(anchors), episode]),
+        "family": family, "detected_at": detected_at,
         "transaction_ids": identifiers, "anchors": sorted(anchors),
-        "case_key": fingerprint([family, sorted(anchors), episode])[:24],
         "first_time": ordered[0]["timestamp"], "last_time": ordered[-1]["timestamp"],
         "equal_timestamps": len({e["timestamp"] for e in ordered}) < len(ordered),
         "search_truncated": False, "events": ordered,
@@ -53,6 +58,7 @@ def make_candidate(family, events, anchors, detected_at):
 
 
 def search_patterns(state, group, config):
+    """Ищет кольца, цепочки, веера и составные формы вокруг операций минуты."""
     detected_at = group[0]["timestamp"]
     cutoff = parse_time(detected_at) - timedelta(hours=config["motif_window_hours"])
     budgets = []
@@ -74,10 +80,9 @@ def search_patterns(state, group, config):
             return
         seen.add(identifier)
 
-        # При переполнении сохраняем выборку по устойчивому хешу, а не первые строки.
+        # При переполнении оставляем кандидатов с меньшим хешем: выбор воспроизводим.
         rank = int(identifier, 16)
-        maximum = config["candidates_per_group"]
-        if len(candidates) >= maximum:
+        if len(candidates) >= config["candidates_per_group"]:
             if rank >= -retained[0][0]:
                 return
             _, removed = heapq.heappop(retained)
@@ -85,10 +90,9 @@ def search_patterns(state, group, config):
         candidates[identifier] = candidate
         heapq.heappush(retained, (-rank, identifier))
 
-    # Каждая новая операция и каждый затронутый счёт получают свой обход.
     seeds = sorted(group, key=lambda e: e["transaction_id"])
 
-    # Идём назад от новой операции: каждое предыдущее звено не позже следующего.
+    # 1. Назад от новой операции: кольца, взаимные пары и транзитные цепочки.
     for seed in seeds:
         budget = new_budget(config["path_scan_limit"])
         source, target = seed["source_key"], seed["target_key"]
@@ -126,6 +130,7 @@ def search_patterns(state, group, config):
         if stack:
             budget["truncated"] = True
 
+    # 2. Звёзды вокруг каждого затронутого счёта: сбор, распределение, сбор-распределение.
     centers = sorted({e[side] for e in seeds for side in ["source_key", "target_key"]})
     for center in centers:
         budget = new_budget(config["center_scan_limit"])
@@ -144,7 +149,7 @@ def search_patterns(state, group, config):
             if len({e["source_key"] for e in earlier_inputs}) >= minimum and len({e["target_key"] for e in outgoing}) >= minimum:
                 keep("gather_scatter", earlier_inputs + outgoing, [center])
 
-    # Новое второе звено B -> C раскрывает ветви A -> B -> C.
+    # 3. Новое звено B -> C раскрывает ветви A -> B -> C и A -> D -> C.
     for seed in seeds:
         budget = new_budget(config["composition_scan_limit"])
         middle, destination = seed["source_key"], seed["target_key"]
@@ -180,17 +185,16 @@ def search_patterns(state, group, config):
         candidate["features"] = structure_features(candidate)
 
     diagnostics = {
-        "scanned": sum(b["scanned"] for b in budgets), "search_truncated": bool(incomplete),
-        "skipped_seeds": 0, "skipped_centers": 0,
-        "searched_seeds": len(seeds), "searched_centers": len(centers),
+        "scanned": sum(b["scanned"] for b in budgets),
+        "search_truncated": bool(incomplete),
         "limited_walks": sum(b["truncated"] for b in budgets),
-        "generated": len(seen), "retained": len(candidates),
-        "candidate_limit_dropped": dropped,
+        "generated": len(seen), "retained": len(candidates), "dropped": dropped,
     }
     return [candidates[key] for key in sorted(candidates)], diagnostics
 
 
 def structure_features(candidate):
+    """Второй ML-уровень: признаки формы для Isolation Forest."""
     events = candidate["events"]
     outgoing = Counter(e["source_key"] for e in events)
     incoming = Counter(e["target_key"] for e in events)
@@ -198,7 +202,7 @@ def structure_features(candidate):
     pairs = {(e["source_key"], e["target_key"]) for e in events}
     duration = (parse_time(candidate["last_time"]) - parse_time(candidate["first_time"])).total_seconds()
 
-    # Сначала сравниваем суммы внутри каждой валюты, затем объединяем отношения.
+    # Суммы сравниваются только внутри одной валюты.
     amounts = defaultdict(list)
     for event in events:
         amounts[event["payment_currency"]].append(float(event["amount_paid"]))
