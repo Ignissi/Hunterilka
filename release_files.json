@@ -69,6 +69,7 @@
     "tests/test_metrics.py",
     "tests/test_recovery.py",
     "tests/test_report.py",
+    "tests/test_reviews.py",
     "tests/test_service.py"
   ]
 }

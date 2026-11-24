@@ -13,7 +13,8 @@ def export_to(conn, folder):
         conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
         cases = [db.case_from_row(row) for row in conn.execute("SELECT * FROM cases ORDER BY detected_at, case_id").fetchall()]
         versions = [db.case_from_row(row) for row in conn.execute("SELECT * FROM case_versions ORDER BY case_id, version").fetchall()]
-        reviews = conn.execute("SELECT case_id, reviewed_at, status, comment, analyst FROM reviews ORDER BY review_id").fetchall()
+        reviews = conn.execute("SELECT case_id, reviewed_at, status, comment, analyst, withdrawn_at "
+                               "FROM reviews ORDER BY review_id").fetchall()
         progress = db.stream_state(conn)
     transactions = {}
     for case in cases:
@@ -25,9 +26,12 @@ def export_to(conn, folder):
                 stream.write(json.dumps(row, ensure_ascii=False) + "\n")
     for row in reviews:
         row["reviewed_at"] = row["reviewed_at"].isoformat()
+        if row["withdrawn_at"] is not None:
+            row["withdrawn_at"] = row["withdrawn_at"].isoformat()
     write_json(folder / "reviews.json", reviews)
     write_json(folder / "demo_manifest.json", {
-        "format": "2.1", "cases": len(cases), "transactions": len(transactions), "versions": len(versions),
+        "format": "2.2" if any(row["withdrawn_at"] for row in reviews) else "2.1",
+        "cases": len(cases), "transactions": len(transactions), "versions": len(versions),
         "reviews": len(reviews), "source_state": progress,
         "data_notice": "Демонстрационная выборка. Не содержит полного источника для продолжения потока.",
     })

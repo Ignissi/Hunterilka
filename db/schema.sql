@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS case_versions (
     PRIMARY KEY (case_id, version)
 );
 
--- Журнал решений специалиста. Строки только добавляются, текущий статус хранится в cases.
+-- Отмена исключает решение из действующих и сохраняет исходную запись журнала.
 CREATE TABLE IF NOT EXISTS reviews (
     review_id           BIGSERIAL PRIMARY KEY,
     case_id             TEXT NOT NULL REFERENCES cases (case_id),
@@ -100,3 +100,5 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 
 CREATE INDEX IF NOT EXISTS reviews_case ON reviews (case_id, reviewed_at);
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS withdrawn_at TIMESTAMP;
+CREATE INDEX IF NOT EXISTS reviews_active_case_id ON reviews (case_id, review_id) WHERE withdrawn_at IS NULL;

@@ -17,8 +17,8 @@ def read_lines(path):
 def load_from(conn, folder, replace=False):
     # Сначала читаем все файлы. Отсутствующий архив не должен очищать рабочую базу.
     manifest = read_json(folder / "demo_manifest.json")
-    if manifest.get("format") != "2.1":
-        raise ValueError("Нужна демонстрационная выгрузка формата 2.1.")
+    if manifest.get("format") not in ("2.1", "2.2"):
+        raise ValueError("Нужна демонстрационная выгрузка формата 2.1 или 2.2.")
     cases = read_lines(folder / "cases.jsonl.gz")
     events = read_lines(folder / "transactions.jsonl.gz")
     versions = read_lines(folder / "versions.jsonl.gz")
@@ -47,8 +47,9 @@ def load_from(conn, folder, replace=False):
                          "VALUES (%s, %s, %s, %s, %s, %s)",
                          (row["case_id"], row["version"], row["detected_at"], row["operation_score"], row["anomaly_score"], Jsonb(row["details"])))
         for row in reviews:
-            conn.execute("INSERT INTO reviews (case_id, reviewed_at, status, comment, analyst) VALUES (%s, %s, %s, %s, %s)",
-                         (row["case_id"], row["reviewed_at"], row["status"], row["comment"], row["analyst"]))
+            conn.execute("INSERT INTO reviews (case_id, reviewed_at, status, comment, analyst, withdrawn_at) "
+                         "VALUES (%s, %s, %s, %s, %s, %s)", (row["case_id"], row["reviewed_at"],
+                         row["status"], row["comment"], row["analyst"], row.get("withdrawn_at")))
     print("Загружено случаев:", len(cases), "; версий:", len(versions), "; решений:", len(reviews))
 
 

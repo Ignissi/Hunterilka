@@ -16,6 +16,7 @@ from src.storage import ROOT
 
 
 DEFAULT_URL = "postgresql://hunterilka:hunterilka@localhost:55432/hunterilka_v2"
+REVIEW_STATUSES = ("Новый", "Требует проверки", "Рассмотрен")
 
 TRANSACTION_COLUMNS = [
     "transaction_id", "ts", "source_bank", "source_account", "target_bank", "target_account",
@@ -288,14 +289,60 @@ def case_versions(conn, case_id):
 
 # ---------- решения специалиста ----------
 
+def _lock_review_case(conn, case_id):
+    # Все редакторы журнала одного случая видят результат предыдущей записи.
+    row = conn.execute("SELECT case_id FROM cases WHERE case_id = %s FOR UPDATE", (case_id,)).fetchone()
+    if row is None:
+        raise ValueError("Случай не найден.")
+
+
+def _last_active_review(conn, case_id):
+    return conn.execute(
+        "SELECT status, comment, analyst FROM reviews WHERE case_id = %s AND withdrawn_at IS NULL "
+        "ORDER BY review_id DESC LIMIT 1", (case_id,),
+    ).fetchone()
+
+
 def add_review(conn, case_id, status, comment, analyst=""):
-    """Запись в журнал и смена текущего статуса выполняются одной транзакцией."""
+    """Сохраняет решение и статус атомарно. Для точного повтора возвращает False."""
+    if status not in REVIEW_STATUSES:
+        raise ValueError("Выберите статус из списка.")
+    if not isinstance(comment, str) or not comment.strip():
+        raise ValueError("Введите комментарий к решению.")
+    if not isinstance(analyst, str) or not analyst.strip():
+        raise ValueError("Укажите имя специалиста.")
+    if not any(char.isalpha() for char in analyst):
+        raise ValueError("В имени специалиста должна быть хотя бы одна буква.")
+    comment, analyst = comment.strip(), analyst.strip()
     with conn.transaction():
+        _lock_review_case(conn, case_id)
+        last = _last_active_review(conn, case_id)
+        if last and (last["status"], last["comment"].strip(), last["analyst"].strip()) == (status, comment, analyst):
+            return False
         conn.execute(
-            "INSERT INTO reviews (case_id, status, comment, analyst) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO reviews (case_id, reviewed_at, status, comment, analyst) "
+            "VALUES (%s, clock_timestamp(), %s, %s, %s)",
             (case_id, status, comment, analyst),
         )
         conn.execute("UPDATE cases SET status = %s WHERE case_id = %s", (status, case_id))
+    return True
+
+
+def withdraw_review(conn, case_id, review_id):
+    """Убирает конкретное решение из действующих, сохраняя историю исправлений."""
+    with conn.transaction():
+        _lock_review_case(conn, case_id)
+        changed = conn.execute(
+            "UPDATE reviews SET withdrawn_at = clock_timestamp() "
+            "WHERE case_id = %s AND review_id = %s AND withdrawn_at IS NULL",
+            (case_id, review_id),
+        )
+        if not changed.rowcount:
+            return False
+        last = _last_active_review(conn, case_id)
+        status = last["status"] if last else "Новый"
+        conn.execute("UPDATE cases SET status = %s WHERE case_id = %s", (status, case_id))
+    return True
 
 
 # ---------- состояние источника и восстановление ----------
@@ -378,9 +425,13 @@ def group_already_saved(conn, group):
     return True
 
 
-def case_reviews(conn, case_id):
-    sql = "SELECT reviewed_at, status, comment, analyst FROM reviews WHERE case_id = %s ORDER BY reviewed_at, review_id"
+def case_reviews(conn, case_id, include_withdrawn=False):
+    sql = "SELECT review_id, reviewed_at, status, comment, analyst, withdrawn_at FROM reviews WHERE case_id = %s"
+    if not include_withdrawn:
+        sql += " AND withdrawn_at IS NULL"
+    sql += " ORDER BY review_id"
     rows = conn.execute(sql, (case_id,)).fetchall()
     for row in rows:
         row["reviewed_at"] = time_text(row["reviewed_at"])
+        row["withdrawn_at"] = time_text(row["withdrawn_at"])
     return rows

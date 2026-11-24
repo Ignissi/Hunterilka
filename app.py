@@ -26,7 +26,7 @@ SCHEME_TEXT = {
     "scatter_gather": "Поток расходится по промежуточным счетам и затем снова сходится.",
     "transaction": "Выделена отдельная операция. Серые связи показывают доступное прошлое её участников.",
 }
-STATUSES = ["Новый", "Требует проверки", "Рассмотрен"]
+STATUSES = list(db.REVIEW_STATUSES)
 STRUCTURE_FAMILIES = [key for key in FAMILY_NAMES if key != "transaction"]
 
 st.set_page_config(page_title="Hunterилка · графовый AML", page_icon="◈", layout="wide",
@@ -118,6 +118,39 @@ def render_case_graph(case, expanded, context, individual, selected):
     return case_graph(case, expanded, context, individual, selected)
 
 
+def show_review_journal(case_id, reviews):
+    if not reviews:
+        return
+    st.markdown("**Журнал решений**")
+    active = {r["review_id"]: r for r in reviews if r["withdrawn_at"] is None}
+    columns = {"review_id": "№", "reviewed_at": "Время", "status": "Статус", "comment": "Комментарий",
+               "analyst": "Специалист"}
+    visible = list(active.values())
+    if len(active) < len(reviews) and st.checkbox("Показать отменённые решения", key="history_" + case_id):
+        visible = reviews
+        columns["withdrawn_at"] = "Отменено"
+    if visible:
+        st.dataframe(pd.DataFrame(visible)[list(columns)].rename(columns=columns),
+                     hide_index=True, use_container_width=True)
+    else:
+        st.caption("Действующих решений нет.")
+    if active:
+        with st.expander("Удалить ошибочную запись"):
+            def label(review_id):
+                row = active[review_id]
+                return f"№ {review_id} · {row['reviewed_at']} · {row['analyst']} · {row['comment'][:60]}"
+
+            chosen = st.selectbox("Запись журнала", options=list(reversed(active)), index=None,
+                                  placeholder="Выберите запись", format_func=label, key="withdraw_select_" + case_id)
+            st.caption("Выбранная запись перейдёт в отменённые. Статус определяет последнее действующее решение.")
+            if st.button("Подтвердить удаление", disabled=chosen is None, key=f"withdraw_{case_id}_{chosen}"):
+                with db.connect() as conn:
+                    changed = db.withdraw_review(conn, case_id, chosen)
+                st.session_state["review_notice"] = ("Запись убрана из действующих решений." if changed
+                                                    else "Запись уже была отменена.")
+                st.rerun()
+
+
 def show_case(case, reviews, versions):
     family = FAMILY_NAMES.get(case["family"], case["family"])
     participants = {e[side] for e in case["events"] for side in ["source_key", "target_key"]}
@@ -205,16 +238,19 @@ def show_case(case, reviews, versions):
             comment = st.text_area("Комментарий")
             analyst = st.text_input("Специалист", value=st.session_state.get("analyst", ""))
             if st.form_submit_button("Сохранить решение"):
-                st.session_state["analyst"] = analyst
-                with db.connect() as conn:
-                    db.add_review(conn, case["case_id"], status, comment, analyst)
-                st.rerun()
+                try:
+                    with db.connect() as conn:
+                        added = db.add_review(conn, case["case_id"], status, comment, analyst)
+                except ValueError as error:
+                    st.error(str(error))
+                else:
+                    if added:
+                        st.session_state["analyst"] = analyst.strip()
+                        st.session_state["review_notice"] = "Решение сохранено."
+                        st.rerun()
+                    st.info("Такое решение уже сохранено. Повторная запись не добавлена.")
 
-        if reviews:
-            st.markdown("**Журнал решений**")
-            st.dataframe(pd.DataFrame(reviews).rename(columns={"reviewed_at": "Время", "status": "Статус",
-                                                              "comment": "Комментарий", "analyst": "Специалист"}),
-                         hide_index=True, use_container_width=True)
+        show_review_journal(case["case_id"], reviews)
         if versions:
             st.markdown("**Прежние версии случая**")
             st.dataframe(pd.DataFrame(versions).rename(columns={"version": "Версия", "detected_at": "Обнаружено",
@@ -268,6 +304,9 @@ def choose_case(table, namespace):
 workspace, network, research, help_tab = st.tabs(["Рабочее место", "Сеть", "Оценка модели", "Справка"])
 
 with workspace:
+    notice = st.session_state.pop("review_notice", None)
+    if notice:
+        st.success(notice)
     if total_cases == 0:
         st.info("Случаев пока нет. Запустите поток: python -m scripts.run_stream --reset "
                 "или загрузите демо: python -m scripts.load_demo")
@@ -332,7 +371,7 @@ with workspace:
             identifier = choose_case(table, queue)
             with db.connect() as conn:
                 case = db.get_case(conn, identifier)
-                reviews = db.case_reviews(conn, identifier)
+                reviews = db.case_reviews(conn, identifier, include_withdrawn=True)
                 versions = db.case_versions(conn, identifier)
             show_case(case, reviews, versions)
 
