@@ -24,4 +24,27 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
-      - run: python -m compileall -q src scripts app.py
+      - name: Check file boundaries, case thresholds and graph paths
+        run: python -m tests.coursework coursework-results.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coursework-results
+          path: coursework-results.json
+      - run: python -m compileall -q src scripts tests app.py
+  coursework-windows:
+    name: Coursework cases on Windows 11
+    runs-on: windows-11-arm
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - run: python -m pip install -r requirements.txt
+      - run: python -m tests.coursework coursework-results.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coursework-results-windows
+          path: coursework-results.json
