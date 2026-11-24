@@ -270,8 +270,9 @@ def show_case(case, reviews, versions):
         st.caption("Модель: " + case["model_id"])
 
 
-def choose_case(table, namespace):
-    """Выбор случая: список, кнопки назад/далее и таблица очереди."""
+@st.fragment
+def browse_cases(table, namespace):
+    """Перелистывает карточки внутри текущей очереди без пересчёта статистики по всем переводам."""
     identifiers = [row["case_id"] for row in table]
     by_id = {row["case_id"]: row for row in table}
     key = namespace + "_case"
@@ -302,7 +303,11 @@ def choose_case(table, namespace):
                  "operation_score": "CatBoost", "anomaly_score": "Необычность", "status": "Рассмотрение",
                  "detected_at": "Обнаружено"}
         st.dataframe(visible[columns].rename(columns=names), hide_index=True, use_container_width=True, height=300)
-    return identifier
+    with db.connect() as conn:
+        case = db.get_case(conn, identifier)
+        reviews = db.case_reviews(conn, identifier, include_withdrawn=True)
+        versions = db.case_versions(conn, identifier)
+    show_case(case, reviews, versions)
 
 
 # ---------- вкладки ----------
@@ -375,12 +380,7 @@ with workspace:
         else:
             st.caption("Структуры рассматриваются отдельно от операций. Необычность не означает доказанное нарушение."
                        if queue == "structures" else "Операции, прошедшие рабочий порог CatBoost, по убыванию оценки.")
-            identifier = choose_case(table, queue)
-            with db.connect() as conn:
-                case = db.get_case(conn, identifier)
-                reviews = db.case_reviews(conn, identifier, include_withdrawn=True)
-                versions = db.case_versions(conn, identifier)
-            show_case(case, reviews, versions)
+            browse_cases(table, queue)
 
 with network:
     st.markdown("### Карта сети: выберите счёт и раскройте его окружение")
