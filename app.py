@@ -118,6 +118,28 @@ def render_case_graph(case, expanded, context, individual, selected):
     return case_graph(case, expanded, context, individual, selected)
 
 
+@st.fragment
+def review_form(case_id, current_status):
+    with st.form("review_" + case_id):
+        status = st.selectbox("Статус", STATUSES, index=STATUSES.index(current_status))
+        comment = st.text_area("Комментарий")
+        analyst = st.text_input("Специалист", value=st.session_state.get("analyst", ""))
+        if not st.form_submit_button("Сохранить решение"):
+            return
+    try:
+        with db.connect() as conn:
+            added = db.add_review(conn, case_id, status, comment, analyst)
+    except ValueError as error:
+        st.error(str(error))
+        return
+    if not added:
+        st.info("Такое решение уже сохранено. Повторная запись не добавлена.")
+        return
+    st.session_state["analyst"] = analyst.strip()
+    st.session_state["review_notice"] = "Решение сохранено."
+    st.rerun()
+
+
 def show_review_journal(case_id, reviews):
     if not reviews:
         return
@@ -233,23 +255,7 @@ def show_case(case, reviews, versions):
             st.caption("Необычность не является вероятностью отмывания. Эти значения описывают вход Isolation Forest.")
 
     with review:
-        with st.form("review_" + case["case_id"]):
-            status = st.selectbox("Статус", STATUSES, index=STATUSES.index(case["status"]))
-            comment = st.text_area("Комментарий")
-            analyst = st.text_input("Специалист", value=st.session_state.get("analyst", ""))
-            if st.form_submit_button("Сохранить решение"):
-                try:
-                    with db.connect() as conn:
-                        added = db.add_review(conn, case["case_id"], status, comment, analyst)
-                except ValueError as error:
-                    st.error(str(error))
-                else:
-                    if added:
-                        st.session_state["analyst"] = analyst.strip()
-                        st.session_state["review_notice"] = "Решение сохранено."
-                        st.rerun()
-                    st.info("Такое решение уже сохранено. Повторная запись не добавлена.")
-
+        review_form(case["case_id"], case["status"])
         show_review_journal(case["case_id"], reviews)
         if versions:
             st.markdown("**Прежние версии случая**")
@@ -304,9 +310,10 @@ def choose_case(table, namespace):
 workspace, network, research, help_tab = st.tabs(["Рабочее место", "Сеть", "Оценка модели", "Справка"])
 
 with workspace:
+    notice_box = st.empty()
     notice = st.session_state.pop("review_notice", None)
     if notice:
-        st.success(notice)
+        notice_box.success(notice)
     if total_cases == 0:
         st.info("Случаев пока нет. Запустите поток: python -m scripts.run_stream --reset "
                 "или загрузите демо: python -m scripts.load_demo")
@@ -454,7 +461,7 @@ with help_tab:
 2. Прочитайте основание. Две оценки относятся к разным объектам и не складываются.
 3. Проверьте направление связей, время и суммы в таблице операций.
 4. Откройте SHAP выбранной операции или признаки структуры.
-5. Сохраните статус и комментарий. Каждое решение попадает в журнал.
+5. Выберите статус, заполните комментарий и имя специалиста, затем сохраните решение. Ошибочную запись можно убрать через журнал.
 
 **Счёт** — вершина графа с составным ключом банка и номера. **Перевод** — событие.
 Повторные переводы одной пары остаются отдельными операциями, хотя на рисунке могут объединяться.
