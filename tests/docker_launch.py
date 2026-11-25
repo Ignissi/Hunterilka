@@ -44,7 +44,7 @@ def main():
                 conn.execute("UPDATE transactions SET payment_format='ACH' WHERE transaction_id=1")
             subprocess.run([*compose, "stop", "postgres"], check=True)
             snapshot.write_bytes(b"already initialized: never open this file")
-            prepare_database(compose, snapshot)
+            url = prepare_database(compose, snapshot)
             with db.connect(url) as conn:
                 rows = conn.execute("SELECT payment_format FROM transactions").fetchall()
                 assert rows == [{"payment_format": "ACH"}], rows
