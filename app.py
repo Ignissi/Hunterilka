@@ -2,6 +2,7 @@
 
 import json
 from datetime import date, timedelta
+from html import escape
 
 import pandas as pd
 import psycopg
@@ -168,6 +169,25 @@ def show_review_journal(case_id, reviews):
     if visible:
         st.dataframe(pd.DataFrame(visible)[list(columns)].rename(columns=columns),
                      hide_index=True, use_container_width=True)
+        with st.expander("Полный текст решения", expanded=True):
+            by_id = {row["review_id"]: row for row in visible}
+
+            def detail_label(review_id):
+                row = by_id[review_id]
+                return f"№ {review_id} · {show_time(row['reviewed_at'])} · {row['status']}"
+
+            selected = st.selectbox("Решение для просмотра", options=list(reversed(by_id)),
+                                    format_func=detail_label, key="review_detail_" + case_id)
+            row = by_id[selected]
+            st.text("Специалист: " + row["analyst"])
+            if row["withdrawn_at"] is not None:
+                st.warning("Решение отменено " + show_time(row["withdrawn_at"]))
+            st.caption("Сохранённый комментарий")
+            # Журнал передаёт полный текст. Экранирование сохраняет его буквальный вид,
+            # а перенос внутри слова позволяет прочитать даже длинную строку без пробелов.
+            st.html('<div class="review-comment" style="white-space:pre-wrap;overflow-wrap:anywhere;'
+                    'line-height:1.6;border:1px solid #30415b;border-radius:8px;padding:1rem;">'
+                    + escape(row["comment"]) + '</div>')
     else:
         st.caption("Действующих решений нет.")
     if active:
