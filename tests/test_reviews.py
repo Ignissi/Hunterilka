@@ -8,6 +8,8 @@ from pathlib import Path
 from threading import Barrier
 from unittest.mock import patch
 
+import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.testing.v1 import AppTest
 
 from scripts.export_demo import export_to
@@ -125,6 +127,40 @@ class ReviewTests(unittest.TestCase):
         audit = db.case_reviews(self.conn, self.case_id, include_withdrawn=True)
         self.assertEqual([r["withdrawn_at"] is not None for r in audit], [False, True])
         self.assertEqual(len(db.case_reviews(self.conn, self.case_id)), 1)
+
+    def test_review_edits_never_scan_all_transfers_in_the_fragment_or_request_a_full_rerun(self):
+        scopes = []
+
+        def traced(query):
+            def read(*args, **kwargs):
+                scopes.append((query.__name__, get_script_run_ctx().current_fragment_id))
+                return query(*args, **kwargs)
+            return read
+
+        with patch.dict(os.environ, {"HUNTERILKA_DB": TEST_URL}), \
+                patch.object(db, "count_transactions", traced(db.count_transactions)), \
+                patch.object(db, "transactions_per_day", traced(db.transactions_per_day)), \
+                patch.object(db, "status_counts", traced(db.status_counts)), \
+                patch.object(st, "rerun", wraps=st.rerun) as rerun:
+            app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=30).run()
+            app.radio(key="queue_channel").set_value("Операции").run()
+
+            def button(label):
+                return next(item for item in app.button if item.label == label)
+
+            app.text_area(key="review_comment_" + self.case_id).set_value("Проверка быстрого сохранения")
+            app.text_input(key="review_analyst_" + self.case_id).set_value("Спец1")
+            button("Сохранить решение").click().run()
+            review_id = db.case_reviews(self.conn, self.case_id)[0]["review_id"]
+            app.selectbox(key="withdraw_select_" + self.case_id).select(review_id).run()
+            button("Подтвердить удаление").click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(db.case_reviews(self.conn, self.case_id), [])
+            rerun.assert_not_called()
+        for name in ("count_transactions", "transactions_per_day", "status_counts"):
+            ids = [fragment for query, fragment in scopes if query == name]
+            self.assertTrue(ids, name)
+            self.assertTrue(all(bool(fragment) == (name == "status_counts") for fragment in ids), name)
 
     def test_review_form_checks_input_resubmission_and_removal(self):
         with patch.dict(os.environ, {"HUNTERILKA_DB": TEST_URL}):

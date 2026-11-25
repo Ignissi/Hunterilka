@@ -118,26 +118,40 @@ def render_case_graph(case, expanded, context, individual, selected):
     return case_graph(case, expanded, context, individual, selected)
 
 
-@st.fragment
 def review_form(case_id, current_status):
-    with st.form("review_" + case_id):
-        status = st.selectbox("Статус", STATUSES, index=STATUSES.index(current_status))
-        comment = st.text_area("Комментарий")
-        analyst = st.text_input("Специалист", value=st.session_state.get("analyst", ""))
-        if not st.form_submit_button("Сохранить решение"):
+    status_key = "review_status_" + case_id
+    comment_key = "review_comment_" + case_id
+    analyst_key = "review_analyst_" + case_id
+    feedback_key = "review_feedback_" + case_id
+
+    def save():
+        analyst = st.session_state[analyst_key]
+        try:
+            with db.connect() as conn:
+                added = db.add_review(conn, case_id, st.session_state[status_key],
+                                      st.session_state[comment_key], analyst)
+        except ValueError as error:
+            st.session_state[feedback_key] = ("error", str(error))
             return
-    try:
-        with db.connect() as conn:
-            added = db.add_review(conn, case_id, status, comment, analyst)
-    except ValueError as error:
-        st.error(str(error))
-        return
-    if not added:
-        st.info("Такое решение уже сохранено. Повторная запись не добавлена.")
-        return
-    st.session_state["analyst"] = analyst.strip()
-    st.session_state["review_notice"] = "Решение сохранено."
-    st.rerun()
+        if added:
+            st.session_state["analyst"] = analyst.strip()
+            st.session_state["review_notice"] = "Решение сохранено."
+        else:
+            st.session_state[feedback_key] = ("info", "Такое решение уже сохранено. Повторная запись не добавлена.")
+
+    with st.form("review_" + case_id):
+        st.selectbox("Статус", STATUSES, index=STATUSES.index(current_status), key=status_key)
+        st.text_area("Комментарий", key=comment_key)
+        st.text_input("Специалист", value=st.session_state.get("analyst", ""), key=analyst_key)
+        st.form_submit_button("Сохранить решение", on_click=save)
+    feedback_box = st.empty()
+    feedback = st.session_state.pop(feedback_key, None)
+    if feedback:
+        level, message = feedback
+        if level == "error":
+            feedback_box.error(message)
+        else:
+            feedback_box.info(message)
 
 
 def show_review_journal(case_id, reviews):
@@ -157,20 +171,25 @@ def show_review_journal(case_id, reviews):
     else:
         st.caption("Действующих решений нет.")
     if active:
-        with st.expander("Удалить ошибочную запись"):
+        selection_key = "withdraw_select_" + case_id
+        with st.expander("Удалить ошибочную запись", expanded=st.session_state.get(selection_key) is not None):
             def label(review_id):
                 row = active[review_id]
                 return f"№ {review_id} · {row['reviewed_at']} · {row['analyst']} · {row['comment'][:60]}"
 
             chosen = st.selectbox("Запись журнала", options=list(reversed(active)), index=None,
-                                  placeholder="Выберите запись", format_func=label, key="withdraw_select_" + case_id)
+                                  placeholder="Выберите запись", format_func=label, key=selection_key)
             st.caption("Выбранная запись перейдёт в отменённые. Статус определяет последнее действующее решение.")
-            if st.button("Подтвердить удаление", disabled=chosen is None, key=f"withdraw_{case_id}_{chosen}"):
+            def withdraw():
                 with db.connect() as conn:
                     changed = db.withdraw_review(conn, case_id, chosen)
+                st.session_state.pop("review_status_" + case_id, None)
+                st.session_state.pop(selection_key, None)
                 st.session_state["review_notice"] = ("Запись убрана из действующих решений." if changed
                                                     else "Запись уже была отменена.")
-                st.rerun()
+
+            st.button("Подтвердить удаление", disabled=chosen is None, key="withdraw_" + case_id,
+                      on_click=withdraw)
 
 
 def show_case(case, reviews, versions):
@@ -270,7 +289,6 @@ def show_case(case, reviews, versions):
         st.caption("Модель: " + case["model_id"])
 
 
-@st.fragment
 def browse_cases(table, namespace):
     """Перелистывает карточки внутри текущей очереди без пересчёта статистики по всем переводам."""
     identifiers = [row["case_id"] for row in table]
@@ -310,15 +328,66 @@ def browse_cases(table, namespace):
     show_case(case, reviews, versions)
 
 
+@st.fragment
+def review_workspace(begin, end, daily_transactions, daily_cases):
+    """Обновляет журнал, очередь и статусы без пересчёта переводов за период."""
+    notice_box = st.empty()
+    notice = st.session_state.pop("review_notice", None)
+    if notice:
+        notice_box.success(notice)
+    with db.connect() as conn:
+        statuses = db.status_counts(conn, begin, end)
+
+    counts = [
+        sum(row["operations"] for row in daily_transactions),
+        sum(row["operation_cases"] for row in daily_cases),
+        sum(row["structure_cases"] for row in daily_cases),
+        statuses.get("Новый", 0), statuses.get("Требует проверки", 0), statuses.get("Рассмотрен", 0),
+    ]
+    names = ["Операций в периоде", "Сигналов операций", "Структур", "Новых", "На проверке", "Рассмотрено"]
+    for column, name, count in zip(st.columns(6), names, counts):
+        column.metric(name, f"{count:,}".replace(",", " "))
+
+    with st.expander("Динамика по дням"):
+        left, right = st.columns(2)
+        if daily_transactions:
+            left.markdown("**Все операции по дням**")
+            left.bar_chart(pd.DataFrame(daily_transactions).set_index("day").rename(columns={"operations": "Операции"}),
+                           color="#7197d5", height=180)
+        if daily_cases:
+            right.markdown("**Случаи по дням**")
+            right.bar_chart(pd.DataFrame(daily_cases).set_index("day").rename(
+                columns={"operation_cases": "Сигналы операций", "structure_cases": "Структуры"}), height=180)
+        st.caption("Операции берутся из рабочего окна базы (30 дней). Случаи хранятся без ограничения по времени.")
+
+    a, b, c = st.columns([2, 3, 2])
+    channel = a.radio("Очередь", ["Структуры", "Операции"], horizontal=True, key="queue_channel")
+    queue = "structures" if channel == "Структуры" else "operations"
+    family = b.selectbox("Форма связанных переводов", ["Все"] + STRUCTURE_FAMILIES,
+                         format_func=lambda value: "Все формы" if value == "Все" else FAMILY_NAMES[value],
+                         key="scheme_" + queue, disabled=queue == "operations")
+    status = c.selectbox("Статус рассмотрения", ["Все"] + STATUSES, key="status_" + queue)
+
+    with db.connect() as conn:
+        table = db.list_cases(conn, begin, end, queue,
+                              family=None if family == "Все" or queue == "operations" else family,
+                              status=None if status == "Все" else status)
+    if family != "Все" and queue == "structures":
+        st.caption(SCHEME_TEXT[family])
+
+    if not table:
+        st.info("В этом периоде и фильтре нет случаев.")
+    else:
+        st.caption("Структуры рассматриваются отдельно от операций. Необычность не означает доказанное нарушение."
+                   if queue == "structures" else "Операции, прошедшие рабочий порог CatBoost, по убыванию оценки.")
+        browse_cases(table, queue)
+
+
 # ---------- вкладки ----------
 
 workspace, network, research, help_tab = st.tabs(["Рабочее место", "Сеть", "Оценка модели", "Справка"])
 
 with workspace:
-    notice_box = st.empty()
-    notice = st.session_state.pop("review_notice", None)
-    if notice:
-        notice_box.success(notice)
     if total_cases == 0:
         st.info("Случаев пока нет. Запустите поток: python -m scripts.run_stream --reset "
                 "или загрузите демо: python -m scripts.load_demo")
@@ -336,51 +405,8 @@ with workspace:
         with db.connect() as conn:
             daily_transactions = db.transactions_per_day(conn, begin, end)
             daily_cases = db.cases_per_day(conn, begin, end)
-            statuses = db.status_counts(conn, begin, end)
 
-        counts = [
-            sum(row["operations"] for row in daily_transactions),
-            sum(row["operation_cases"] for row in daily_cases),
-            sum(row["structure_cases"] for row in daily_cases),
-            statuses.get("Новый", 0), statuses.get("Требует проверки", 0), statuses.get("Рассмотрен", 0),
-        ]
-        names = ["Операций в периоде", "Сигналов операций", "Структур", "Новых", "На проверке", "Рассмотрено"]
-        for column, name, count in zip(st.columns(6), names, counts):
-            column.metric(name, f"{count:,}".replace(",", " "))
-
-        with st.expander("Динамика по дням"):
-            left, right = st.columns(2)
-            if daily_transactions:
-                left.markdown("**Все операции по дням**")
-                left.bar_chart(pd.DataFrame(daily_transactions).set_index("day").rename(columns={"operations": "Операции"}),
-                               color="#7197d5", height=180)
-            if daily_cases:
-                right.markdown("**Случаи по дням**")
-                right.bar_chart(pd.DataFrame(daily_cases).set_index("day").rename(
-                    columns={"operation_cases": "Сигналы операций", "structure_cases": "Структуры"}), height=180)
-            st.caption("Операции берутся из рабочего окна базы (30 дней). Случаи хранятся без ограничения по времени.")
-
-        a, b, c = st.columns([2, 3, 2])
-        channel = a.radio("Очередь", ["Структуры", "Операции"], horizontal=True, key="queue_channel")
-        queue = "structures" if channel == "Структуры" else "operations"
-        family = b.selectbox("Форма связанных переводов", ["Все"] + STRUCTURE_FAMILIES,
-                             format_func=lambda value: "Все формы" if value == "Все" else FAMILY_NAMES[value],
-                             key="scheme_" + queue, disabled=queue == "operations")
-        status = c.selectbox("Статус рассмотрения", ["Все"] + STATUSES, key="status_" + queue)
-
-        with db.connect() as conn:
-            table = db.list_cases(conn, begin, end, queue,
-                                  family=None if family == "Все" or queue == "operations" else family,
-                                  status=None if status == "Все" else status)
-        if family != "Все" and queue == "structures":
-            st.caption(SCHEME_TEXT[family])
-
-        if not table:
-            st.info("В этом периоде и фильтре нет случаев.")
-        else:
-            st.caption("Структуры рассматриваются отдельно от операций. Необычность не означает доказанное нарушение."
-                       if queue == "structures" else "Операции, прошедшие рабочий порог CatBoost, по убыванию оценки.")
-            browse_cases(table, queue)
+        review_workspace(begin, end, daily_transactions, daily_cases)
 
 with network:
     st.markdown("### Карта сети: выберите счёт и раскройте его окружение")
